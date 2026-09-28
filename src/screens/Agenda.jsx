@@ -1,0 +1,1018 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../supabaseClient'
+import CampoMoeda from '../components/CampoMoeda'
+import CampoTelefone from '../components/CampoTelefone'
+import { formatarTelefone } from '../utils/mascaras'
+
+const ROTULOS_DIA = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
+
+function paraISO(d) {
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mes}-${dia}`
+}
+
+// Segunda a sexta da semana de `base`; sábado e domingo caem na semana seguinte.
+function diasDaSemana(base) {
+  const dow = base.getDay()
+  const deslocamento = dow === 0 ? 1 : dow === 6 ? 2 : 1 - dow
+  return ROTULOS_DIA.map((label, i) => {
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + deslocamento + i)
+    return { label, numero: d.getDate(), iso: paraISO(d) }
+  })
+}
+
+// Datas ISO do mês de `d`, com null nos espaços antes do dia 1 (grid começa no domingo).
+function celulasDoMes(d) {
+  const ano = d.getFullYear()
+  const mes = d.getMonth()
+  const vazios = new Date(ano, mes, 1).getDay()
+  const total = new Date(ano, mes + 1, 0).getDate()
+  return [
+    ...Array(vazios).fill(null),
+    ...Array.from({ length: total }, (_, i) => paraISO(new Date(ano, mes, i + 1))),
+  ]
+}
+
+function rotuloMes(d) {
+  const texto = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  return texto.charAt(0).toUpperCase() + texto.slice(1).replace(' de ', ' ')
+}
+
+function formatarData(data) {
+  const [ano, mes, dia] = data.slice(0, 10).split('-').map(Number)
+  const texto = new Date(ano, mes - 1, dia).toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+function formatarValor(valor) {
+  return `R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function pluralizar(n, singular, plural) {
+  return n === 1 ? singular : plural
+}
+
+// agendamento_id é unique em ordens_servico, então o PostgREST retorna objeto, não array.
+function obterOsDoAgendamento(ag) {
+  const os = ag.ordens_servico
+  if (!os) return null
+  return Array.isArray(os) ? os[0] ?? null : os
+}
+
+function calcularStatusAgendamento(ag) {
+  const os = obterOsDoAgendamento(ag)
+  if (os && os.status !== 'aberta') {
+    return {
+      label: 'Concluído',
+      icone: '✓',
+      corBorda: '#4C7A4E',
+      corBadgeBg: '#E9F3E9',
+      corBadgeTexto: '#4C7A4E',
+      os,
+    }
+  }
+  const dataHora = ag.data && ag.hora ? new Date(`${ag.data.slice(0, 10)}T${ag.hora.slice(0, 5)}:00`) : null
+  const jaPassou = dataHora ? dataHora.getTime() < Date.now() : false
+  if (jaPassou) {
+    return {
+      label: 'Pendente',
+      icone: '',
+      corBorda: '#D97706',
+      corBadgeBg: '#FEF3C7',
+      corBadgeTexto: '#92400E',
+      os,
+    }
+  }
+  return {
+    label: 'Agendado',
+    icone: '',
+    corBorda: '#2563EB',
+    corBadgeBg: '#DBEAFE',
+    corBadgeTexto: '#1D4ED8',
+    os,
+  }
+}
+
+function Agenda({ abrirOS }) {
+  const [agendamentos, setAgendamentos] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [clientes, setClientes] = useState([])
+  const [tipos, setTipos] = useState([])
+
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [clienteSelecionadoId, setClienteSelecionadoId] = useState('')
+  const [clienteBusca, setClienteBusca] = useState('')
+  const [clienteDropdownAberto, setClienteDropdownAberto] = useState(false)
+  const [novoClienteAtivo, setNovoClienteAtivo] = useState(false)
+  const [novoClienteNome, setNovoClienteNome] = useState('')
+  const [novoClienteTelefone, setNovoClienteTelefone] = useState('')
+  const [tipoSelecionado, setTipoSelecionado] = useState('')
+  const [novoTipoAtivo, setNovoTipoAtivo] = useState(false)
+  const [novoTipoMaterial, setNovoTipoMaterial] = useState('')
+  const [novoTipoColoracao, setNovoTipoColoracao] = useState('')
+  const [novoTipoMarca, setNovoTipoMarca] = useState('')
+  const [criandoTipo, setCriandoTipo] = useState(false)
+  const [servico, setServico] = useState('')
+  const [valorCombinado, setValorCombinado] = useState('')
+  const [data, setData] = useState('')
+  const [hora, setHora] = useState('')
+  const [local, setLocal] = useState('')
+  const [salvando, setSalvando] = useState(false)
+
+  const [agendamentoEditando, setAgendamentoEditando] = useState(null)
+
+  const [dataBase, setDataBase] = useState(() => new Date())
+  const [diaSelecionado, setDiaSelecionado] = useState(() => paraISO(new Date()))
+  const [mostrarCalendario, setMostrarCalendario] = useState(false)
+  const [mesCalendario, setMesCalendario] = useState(() => new Date())
+
+  function limparCampos() {
+    setClienteSelecionadoId('')
+    setClienteBusca('')
+    setClienteDropdownAberto(false)
+    setNovoClienteAtivo(false)
+    setNovoClienteNome('')
+    setNovoClienteTelefone('')
+    setTipoSelecionado('')
+    setNovoTipoAtivo(false)
+    setNovoTipoMaterial('')
+    setNovoTipoColoracao('')
+    setNovoTipoMarca('')
+    setServico('')
+    setValorCombinado('')
+    setData('')
+    setHora('')
+    setLocal('')
+  }
+
+  function abrirEdicao(ag) {
+    setAgendamentoEditando(ag)
+    setClienteSelecionadoId(ag.cliente_id ?? '')
+    setClienteBusca(ag.clientes?.nome ?? '')
+    setClienteDropdownAberto(false)
+    setNovoClienteAtivo(false)
+    setNovoClienteNome('')
+    setNovoClienteTelefone('')
+    setTipoSelecionado(ag.tipo_id ?? '')
+    setNovoTipoAtivo(false)
+    setNovoTipoMaterial('')
+    setNovoTipoColoracao('')
+    setNovoTipoMarca('')
+    setServico(ag.servico ?? '')
+    setValorCombinado(ag.valor != null ? String(ag.valor) : '')
+    setData(ag.data ? ag.data.slice(0, 10) : '')
+    setHora(ag.hora ? ag.hora.slice(0, 5) : '')
+    setLocal(ag.local ?? '')
+    setMostrarForm(true)
+  }
+
+  function selecionarCliente(c) {
+    setClienteSelecionadoId(c.id)
+    setClienteBusca(c.nome)
+    setClienteDropdownAberto(false)
+  }
+
+  function abrirCadastroCliente() {
+    setNovoClienteNome(clienteBusca.trim())
+    setNovoClienteTelefone('')
+    setNovoClienteAtivo(true)
+    setClienteDropdownAberto(false)
+  }
+
+  function cancelarNovoCliente() {
+    setNovoClienteAtivo(false)
+    setNovoClienteNome('')
+    setNovoClienteTelefone('')
+    setClienteBusca('')
+    setClienteSelecionadoId('')
+  }
+
+  function abrirCadastroTipo() {
+    setNovoTipoMaterial('')
+    setNovoTipoColoracao('')
+    setNovoTipoMarca('')
+    setNovoTipoAtivo(true)
+  }
+
+  function cancelarNovoTipo() {
+    setNovoTipoAtivo(false)
+    setNovoTipoMaterial('')
+    setNovoTipoColoracao('')
+    setNovoTipoMarca('')
+  }
+
+  async function salvarNovoTipo() {
+    const materialNovo = novoTipoMaterial.trim()
+    if (!materialNovo) {
+      alert('Informe o material do tipo de película.')
+      return
+    }
+    const coloracaoNovo = novoTipoColoracao.trim()
+    const nomeNovo = coloracaoNovo ? `${materialNovo} ${coloracaoNovo}` : materialNovo
+    setCriandoTipo(true)
+    const { data: tipoCriado, error } = await supabase
+      .from('tipos_pelicula')
+      .insert({
+        nome: nomeNovo,
+        material: materialNovo,
+        coloracao: coloracaoNovo || null,
+        marca: novoTipoMarca || null,
+        ativo: true,
+      })
+      .select('id, nome')
+      .single()
+    setCriandoTipo(false)
+    if (error) {
+      console.error('Erro ao cadastrar tipo de película:', error)
+      alert('Não foi possível cadastrar o tipo de película. Tente novamente.')
+      return
+    }
+    setTipos((atual) => [...atual, tipoCriado].sort((a, b) => a.nome.localeCompare(b.nome)))
+    setTipoSelecionado(tipoCriado.id)
+    setNovoTipoAtivo(false)
+    setNovoTipoMaterial('')
+    setNovoTipoColoracao('')
+    setNovoTipoMarca('')
+  }
+
+  function fecharForm() {
+    setMostrarForm(false)
+    setAgendamentoEditando(null)
+    limparCampos()
+  }
+
+  async function carregarAgendamentos() {
+    const { data: dados, error } = await supabase
+      .from('agendamentos')
+      .select('*, clientes(nome), tipos_pelicula(nome), ordens_servico(id, status, valor_pago)')
+      .order('data', { ascending: true })
+      .order('hora', { ascending: true })
+    if (error) {
+      console.error('Erro ao buscar agendamentos:', error)
+    } else {
+      setAgendamentos(dados ?? [])
+    }
+    setLoading(false)
+  }
+
+  async function carregarClientes() {
+    const { data: dados, error } = await supabase
+      .from('clientes')
+      .select('id, nome, telefone')
+      .order('nome', { ascending: true })
+    if (error) {
+      console.error('Erro ao buscar clientes:', error)
+    } else {
+      setClientes(dados ?? [])
+    }
+  }
+
+  async function carregarTipos() {
+    const { data: dados, error } = await supabase
+      .from('tipos_pelicula')
+      .select('id, nome')
+      .eq('ativo', true)
+      .order('nome', { ascending: true })
+    if (error) {
+      console.error('Erro ao buscar tipos de película:', error)
+    } else {
+      setTipos(dados ?? [])
+    }
+  }
+
+  useEffect(() => {
+    carregarAgendamentos()
+    carregarClientes()
+    carregarTipos()
+  }, [])
+
+  async function salvar(e) {
+    e.preventDefault()
+    if (agendamentoEditando && !window.confirm('Salvar alterações deste agendamento?')) return
+    setSalvando(true)
+
+    let clienteIdFinal = clienteSelecionadoId || null
+
+    if (novoClienteAtivo) {
+      const nomeNovoCliente = novoClienteNome.trim()
+      if (!nomeNovoCliente) {
+        setSalvando(false)
+        alert('Informe o nome do cliente.')
+        return
+      }
+      const { data: clienteCriado, error: erroCliente } = await supabase
+        .from('clientes')
+        .insert({
+          nome: nomeNovoCliente,
+          telefone: novoClienteTelefone || null,
+          tipo: 'automotivo',
+          status: 'em_dia',
+        })
+        .select('id')
+        .single()
+      if (erroCliente) {
+        console.error('Erro ao cadastrar cliente:', erroCliente)
+        setSalvando(false)
+        alert('Não foi possível cadastrar o cliente. Tente novamente.')
+        return
+      }
+      clienteIdFinal = clienteCriado.id
+    }
+
+    const dados = {
+      cliente_id: clienteIdFinal,
+      tipo_id: tipoSelecionado,
+      servico,
+      valor: valorCombinado === '' ? null : Number(valorCombinado),
+      data,
+      hora,
+      local,
+    }
+    const { error } = agendamentoEditando
+      ? await supabase.from('agendamentos').update(dados).eq('id', agendamentoEditando.id)
+      : await supabase.from('agendamentos').insert(dados)
+    setSalvando(false)
+    if (error) {
+      console.error('Erro ao salvar agendamento:', error)
+      alert('Não foi possível salvar o agendamento. Tente novamente.')
+      return
+    }
+    fecharForm()
+    await carregarAgendamentos()
+    if (novoClienteAtivo) await carregarClientes()
+  }
+
+  async function excluir() {
+    if (!window.confirm('Excluir este agendamento?')) return
+    setSalvando(true)
+    const { error } = await supabase.from('agendamentos').delete().eq('id', agendamentoEditando.id)
+    setSalvando(false)
+    if (error) {
+      console.error('Erro ao excluir agendamento:', error)
+      alert('Não foi possível excluir o agendamento. Tente novamente.')
+      return
+    }
+    fecharForm()
+    await carregarAgendamentos()
+  }
+
+  if (mostrarForm) {
+    const campo = {
+      width: '100%',
+      boxSizing: 'border-box',
+      padding: '12px',
+      borderRadius: 10,
+      border: '1px solid #E2E0DC',
+      fontSize: 14,
+      background: '#FFFFFF',
+    }
+    const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
+    const termoBuscaCliente = clienteBusca.trim().toLowerCase()
+    const termoBuscaDigitos = termoBuscaCliente.replace(/\D/g, '')
+    const clientesFiltrados = termoBuscaCliente
+      ? clientes.filter(
+          (c) =>
+            c.nome.toLowerCase().includes(termoBuscaCliente) ||
+            (termoBuscaDigitos && (c.telefone ?? '').replace(/\D/g, '').includes(termoBuscaDigitos))
+        )
+      : clientes
+    return (
+      <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
+        <header style={{ background: '#171717', padding: '24px 20px' }}>
+          <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
+            {agendamentoEditando ? 'Editar agendamento' : 'Novo agendamento'}
+          </h1>
+        </header>
+        <form
+          onSubmit={salvar}
+          style={{
+            padding: '20px 20px calc(140px + env(safe-area-inset-bottom, 0px)) 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+          }}
+        >
+          <div style={rotulo}>
+            <span>Cliente</span>
+            {!novoClienteAtivo && (
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Buscar por nome ou telefone"
+                  value={clienteBusca}
+                  onChange={(e) => {
+                    setClienteBusca(e.target.value)
+                    setClienteSelecionadoId('')
+                    setClienteDropdownAberto(true)
+                  }}
+                  onFocus={() => setClienteDropdownAberto(true)}
+                  onBlur={() => setTimeout(() => setClienteDropdownAberto(false), 150)}
+                  style={campo}
+                />
+                {clienteDropdownAberto && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      zIndex: 10,
+                      marginTop: 4,
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E0DC',
+                      borderRadius: 10,
+                      maxHeight: 200,
+                      overflowY: 'auto',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    {clientesFiltrados.map((c) => (
+                      <div
+                        key={c.id}
+                        onMouseDown={() => selecionarCliente(c)}
+                        style={{ padding: '10px 12px', cursor: 'pointer', fontSize: 14, borderBottom: '1px solid #F0EEEA' }}
+                      >
+                        {c.nome}
+                        {c.telefone ? ` · ${formatarTelefone(c.telefone)}` : ''}
+                      </div>
+                    ))}
+                    {termoBuscaCliente && clientesFiltrados.length === 0 && (
+                      <div
+                        onMouseDown={abrirCadastroCliente}
+                        style={{ padding: '10px 12px', cursor: 'pointer', fontSize: 14, color: '#A6332C', fontWeight: 600 }}
+                      >
+                        + Cadastrar "{clienteBusca.trim()}"
+                      </div>
+                    )}
+                    {!termoBuscaCliente && clientesFiltrados.length === 0 && (
+                      <div style={{ padding: '10px 12px', fontSize: 13, color: '#8A8A8A' }}>
+                        Nenhum cliente cadastrado.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {novoClienteAtivo && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #E2E0DC', borderRadius: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo cliente</span>
+                  <button
+                    type="button"
+                    onClick={cancelarNovoCliente}
+                    style={{ background: 'none', border: 'none', color: '#8A8A8A', cursor: 'pointer', fontSize: 13 }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                <label style={rotulo}>
+                  Nome
+                  <input
+                    type="text"
+                    required
+                    value={novoClienteNome}
+                    onChange={(e) => setNovoClienteNome(e.target.value)}
+                    style={campo}
+                  />
+                </label>
+                <label style={rotulo}>
+                  Telefone
+                  <CampoTelefone value={novoClienteTelefone} onChange={setNovoClienteTelefone} style={campo} />
+                </label>
+              </div>
+            )}
+          </div>
+          <div style={rotulo}>
+            <span>Tipo de película</span>
+            <select
+              required
+              value={tipoSelecionado}
+              onChange={(e) => {
+                const valor = e.target.value
+                if (valor === '__novo__') {
+                  abrirCadastroTipo()
+                  return
+                }
+                setTipoSelecionado(valor)
+              }}
+              style={campo}
+            >
+              <option value="" disabled>
+                {tipos.length ? 'Selecione um tipo' : 'Nenhum tipo cadastrado'}
+              </option>
+              {tipos.map((t) => (
+                <option key={t.id} value={t.id}>{t.nome}</option>
+              ))}
+              <option value="__novo__">+ Novo tipo</option>
+            </select>
+            {novoTipoAtivo && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #E2E0DC', borderRadius: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo tipo de película</span>
+                  <button
+                    type="button"
+                    onClick={cancelarNovoTipo}
+                    style={{ background: 'none', border: 'none', color: '#8A8A8A', cursor: 'pointer', fontSize: 13 }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Material"
+                  required
+                  list="materiais-sugeridos"
+                  value={novoTipoMaterial}
+                  onChange={(e) => setNovoTipoMaterial(e.target.value)}
+                  style={campo}
+                />
+                <input
+                  type="text"
+                  placeholder="Coloração (opcional)"
+                  list="coloracoes-sugeridas"
+                  value={novoTipoColoracao}
+                  onChange={(e) => setNovoTipoColoracao(e.target.value)}
+                  style={campo}
+                />
+                <input
+                  type="text"
+                  placeholder="Marca (opcional)"
+                  value={novoTipoMarca}
+                  onChange={(e) => setNovoTipoMarca(e.target.value)}
+                  style={campo}
+                />
+                <datalist id="materiais-sugeridos">
+                  <option value="Nano Ceramic" />
+                  <option value="PAP" />
+                  <option value="Fumê" />
+                  <option value="Espelhado" />
+                  <option value="Segurança" />
+                </datalist>
+                <datalist id="coloracoes-sugeridas">
+                  <option value="G5" />
+                  <option value="G20" />
+                  <option value="G35" />
+                  <option value="G50" />
+                  <option value="G70" />
+                </datalist>
+                <button
+                  type="button"
+                  onClick={salvarNovoTipo}
+                  disabled={criandoTipo}
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    border: 'none',
+                    background: '#A6332C',
+                    color: '#FFFFFF',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    opacity: criandoTipo ? 0.6 : 1,
+                  }}
+                >
+                  {criandoTipo ? 'Salvando...' : 'Adicionar tipo'}
+                </button>
+              </div>
+            )}
+          </div>
+          <label style={rotulo}>
+            Serviço
+            <input
+              type="text"
+              required
+              list="servicos-sugeridos"
+              value={servico}
+              onChange={(e) => setServico(e.target.value)}
+              style={campo}
+            />
+            <datalist id="servicos-sugeridos">
+              <option value="Carro completo" />
+              <option value="Para-brisa" />
+              <option value="Vidros laterais" />
+              <option value="Traseiro" />
+              <option value="Residencial" />
+              <option value="Comercial" />
+            </datalist>
+          </label>
+          <label style={rotulo}>
+            Valor combinado
+            <CampoMoeda value={valorCombinado} onChange={setValorCombinado} style={campo} />
+          </label>
+          <label style={rotulo}>
+            Data
+            <input type="date" required value={data} onChange={(e) => setData(e.target.value)} style={campo} />
+          </label>
+          <label style={rotulo}>
+            Hora
+            <input type="time" required value={hora} onChange={(e) => setHora(e.target.value)} style={campo} />
+          </label>
+          <label style={rotulo}>
+            Local
+            <input type="text" value={local} onChange={(e) => setLocal(e.target.value)} style={campo} />
+          </label>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              onClick={fecharForm}
+              style={{
+                flex: 1,
+                padding: 12,
+                borderRadius: 10,
+                border: '1px solid #E2E0DC',
+                background: '#FFFFFF',
+                color: '#4A4A4A',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+            {agendamentoEditando && (
+              <button
+                type="button"
+                onClick={excluir}
+                disabled={salvando}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 10,
+                  border: '1px solid #A6332C',
+                  background: '#FFFFFF',
+                  color: '#A6332C',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Excluir
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={salvando}
+              style={{
+                flex: 1,
+                padding: 12,
+                borderRadius: 10,
+                border: 'none',
+                background: '#A6332C',
+                color: '#FFFFFF',
+                fontWeight: 600,
+                cursor: 'pointer',
+                opacity: salvando ? 0.6 : 1,
+              }}
+            >
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    )
+  }
+
+  const dias = diasDaSemana(dataBase)
+  const agendamentosDoDia = agendamentos.filter((ag) => ag.data?.slice(0, 10) === diaSelecionado)
+  const concluidosDoDia = agendamentosDoDia.filter(
+    (ag) => calcularStatusAgendamento(ag).label === 'Concluído'
+  ).length
+
+  function mudarSemana(delta) {
+    const nova = new Date(dataBase)
+    nova.setDate(nova.getDate() + delta * 7)
+    setDataBase(nova)
+  }
+
+  function irParaHoje() {
+    const hoje = new Date()
+    setDataBase(hoje)
+    setDiaSelecionado(paraISO(hoje))
+  }
+
+  function mudarMes(delta) {
+    setMesCalendario(new Date(mesCalendario.getFullYear(), mesCalendario.getMonth() + delta, 1))
+  }
+
+  function selecionarDoCalendario(iso) {
+    const [ano, mes, dia] = iso.split('-').map(Number)
+    setDiaSelecionado(iso)
+    setDataBase(new Date(ano, mes - 1, dia))
+    setMostrarCalendario(false)
+  }
+
+  const diasComAgendamento = new Set(agendamentos.map((ag) => ag.data?.slice(0, 10)))
+
+  const botaoPequeno = {
+    padding: '6px 12px',
+    borderRadius: 999,
+    border: '1px solid #3A3A3A',
+    background: '#232323',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+  }
+
+  const seta = {
+    flexShrink: 0,
+    width: 28,
+    background: 'none',
+    border: 'none',
+    color: '#CFCFCF',
+    fontSize: 24,
+    lineHeight: 1,
+    cursor: 'pointer',
+  }
+
+  return (
+    <div style={{ paddingBottom: 90 }}>
+      <header style={{ background: '#171717', padding: '24px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
+            Agenda
+          </h1>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => {
+                setMesCalendario(dataBase)
+                setMostrarCalendario(true)
+              }}
+              aria-label="Abrir calendário"
+              style={{ ...botaoPequeno, fontSize: 14 }}
+            >
+              📅
+            </button>
+            <button type="button" onClick={irParaHoje} style={botaoPequeno}>
+              Hoje
+            </button>
+          </div>
+        </div>
+
+        <div style={{ color: '#CFCFCF', fontSize: 12, marginTop: 12 }}>
+          {rotuloMes(dataBase)}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
+          <button type="button" onClick={() => mudarSemana(-1)} aria-label="Semana anterior" style={seta}>
+            ‹
+          </button>
+          <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+            {dias.map((dia) => {
+              const ativo = dia.iso === diaSelecionado
+              return (
+                <div
+                  key={dia.iso}
+                  onClick={() => setDiaSelecionado(dia.iso)}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    borderRadius: 10,
+                    padding: '10px 0',
+                    cursor: 'pointer',
+                    background: ativo ? '#A6332C' : '#232323',
+                    color: ativo ? '#FFFFFF' : '#CFCFCF',
+                  }}
+                >
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>{dia.label}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>{dia.numero}</span>
+                </div>
+              )
+            })}
+          </div>
+          <button type="button" onClick={() => mudarSemana(1)} aria-label="Próxima semana" style={seta}>
+            ›
+          </button>
+        </div>
+      </header>
+
+      <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {loading && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
+        {!loading && agendamentosDoDia.length === 0 && (
+          <div style={{ color: '#8A8A8A' }}>Nenhum agendamento neste dia.</div>
+        )}
+        {!loading && agendamentosDoDia.length > 0 && (
+          <section>
+            <div style={{ fontWeight: 700 }}>{formatarData(diaSelecionado)}</div>
+            <div style={{ fontSize: 12, color: '#8A8A8A', marginTop: 2, marginBottom: 12 }}>
+              {agendamentosDoDia.length} {pluralizar(agendamentosDoDia.length, 'serviço', 'serviços')} · {concluidosDoDia}{' '}
+              {pluralizar(concluidosDoDia, 'concluído', 'concluídos')}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {agendamentosDoDia.map((item, index) => {
+                const status = calcularStatusAgendamento(item)
+                const concluido = status.label === 'Concluído'
+                const valorExibido = concluido ? status.os?.valor_pago : item.valor
+                const servicoPelicula = [item.servico, item.tipos_pelicula?.nome].filter(Boolean).join(' · ')
+                return (
+                  <div key={item.id ?? index} style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ width: 48, flexShrink: 0, fontWeight: 700 }}>
+                      {item.hora?.slice(0, 5)}
+                    </div>
+                    <div
+                      onClick={() => {
+                        if (concluido && status.os) {
+                          abrirOS?.(status.os.id, 'detalhes')
+                        } else {
+                          abrirEdicao(item)
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E0DC',
+                        borderLeft: `4px solid ${status.corBorda}`,
+                        borderRadius: 12,
+                        padding: 12,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 600 }}>
+                          {item.clientes?.nome || 'Sem cliente'}
+                        </span>
+                        <span
+                          style={{
+                            flexShrink: 0,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: '3px 8px',
+                            borderRadius: 999,
+                            background: status.corBadgeBg,
+                            color: status.corBadgeTexto,
+                          }}
+                        >
+                          {status.icone ? `${status.icone} ` : ''}{status.label}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 13, color: '#8A8A8A' }}>
+                        {servicoPelicula}
+                      </div>
+                      {valorExibido != null && (
+                        <div style={{ fontSize: 13, fontWeight: 700, textAlign: 'right' }}>
+                          {formatarValor(valorExibido)}
+                        </div>
+                      )}
+                      {!concluido && status.os && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            abrirOS?.(status.os.id, 'fechar')
+                          }}
+                          style={{
+                            marginTop: 4,
+                            alignSelf: 'flex-start',
+                            padding: '6px 12px',
+                            borderRadius: 999,
+                            border: '1px solid #171717',
+                            background: '#FFFFFF',
+                            color: '#171717',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Fechar OS
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setAgendamentoEditando(null)
+          limparCampos()
+          setData(paraISO(new Date()))
+          setMostrarForm(true)
+        }}
+        style={{
+          position: 'fixed',
+          right: 20,
+          bottom: 90,
+          width: 56,
+          height: 56,
+          borderRadius: '50%',
+          background: '#A6332C',
+          color: '#FFFFFF',
+          border: 'none',
+          fontSize: 28,
+          lineHeight: 1,
+          cursor: 'pointer',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+        }}
+      >
+        +
+      </button>
+
+      {mostrarCalendario && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: '#171717',
+            overflowY: 'auto',
+            padding: '24px 20px',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" style={seta}>
+              ‹
+            </button>
+            <div style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 700 }}>
+              {rotuloMes(mesCalendario)}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" style={seta}>
+                ›
+              </button>
+              <button
+                type="button"
+                onClick={() => setMostrarCalendario(false)}
+                aria-label="Fechar calendário"
+                style={{ ...seta, fontSize: 20, marginLeft: 8 }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: 6,
+              marginTop: 20,
+            }}
+          >
+            {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map((rotulo) => (
+              <div
+                key={rotulo}
+                style={{ textAlign: 'center', color: '#9A9A9A', fontSize: 11, fontWeight: 600 }}
+              >
+                {rotulo}
+              </div>
+            ))}
+            {celulasDoMes(mesCalendario).map((iso, i) => {
+              if (!iso) return <div key={`vazio-${i}`} />
+              const ativo = iso === diaSelecionado
+              return (
+                <div
+                  key={iso}
+                  onClick={() => selecionarDoCalendario(iso)}
+                  style={{
+                    aspectRatio: '1',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    background: ativo ? '#A6332C' : '#232323',
+                    color: ativo ? '#FFFFFF' : '#CFCFCF',
+                    fontSize: 15,
+                    fontWeight: 600,
+                  }}
+                >
+                  {Number(iso.slice(8))}
+                  <span
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: diasComAgendamento.has(iso)
+                        ? ativo ? '#FFFFFF' : '#A6332C'
+                        : 'transparent',
+                    }}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default Agenda
