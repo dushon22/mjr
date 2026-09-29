@@ -10,10 +10,26 @@ const TABS = [
   { key: 'os', label: 'OS', Icon: ClipboardList },
 ]
 
+const ICONE_LARGURA = 24
+const GAP_LABEL = 6
+const PADDING_H = 20 // padding: 8px 10px (mobile) somado dos dois lados
+
+// Largura do maior rótulo (medida via canvas, sem tocar no DOM real) + ícone/paddings,
+// usada como largura FIXA do indicador — assim ele só precisa animar transform, não width.
+function calcularLarguraIndicador() {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  ctx.font = "500 12px 'InterVariable', 'Inter', system-ui, sans-serif"
+  const maiorLabel = Math.max(...TABS.map(({ label }) => ctx.measureText(label).width))
+  return Math.ceil(ICONE_LARGURA + GAP_LABEL + maiorLabel + PADDING_H)
+}
+
 function BottomNav({ activeTab, setActiveTab }) {
   const navRef = useRef(null)
   const itemRefs = useRef({})
-  const [indicador, setIndicador] = useState({ left: 0, width: 0, pronto: false })
+  const [larguraIndicador] = useState(calcularLarguraIndicador)
+  const [indicadorLeft, setIndicadorLeft] = useState(0)
+  const [pronto, setPronto] = useState(false)
 
   useLayoutEffect(() => {
     const nav = navRef.current
@@ -24,7 +40,9 @@ function BottomNav({ activeTab, setActiveTab }) {
       if (!item) return
       const navRect = nav.getBoundingClientRect()
       const itemRect = item.getBoundingClientRect()
-      setIndicador({ left: itemRect.left - navRect.left, width: itemRect.width, pronto: true })
+      const centro = itemRect.left - navRect.left + itemRect.width / 2
+      setIndicadorLeft(centro - larguraIndicador / 2)
+      setPronto(true)
     }
 
     atualizarIndicador()
@@ -36,7 +54,7 @@ function BottomNav({ activeTab, setActiveTab }) {
       observer.disconnect()
       window.removeEventListener('resize', atualizarIndicador)
     }
-  }, [activeTab])
+  }, [activeTab, larguraIndicador])
 
   return (
     <nav className="bottom-nav" ref={navRef}>
@@ -44,9 +62,9 @@ function BottomNav({ activeTab, setActiveTab }) {
         className="bottom-nav-indicador"
         aria-hidden="true"
         style={{
-          transform: `translateX(${indicador.left}px)`,
-          width: `${indicador.width}px`,
-          opacity: indicador.pronto ? 1 : 0,
+          width: `${larguraIndicador}px`,
+          transform: `translateX(${indicadorLeft}px)`,
+          opacity: pronto ? 1 : 0,
         }}
       />
       {TABS.map(({ key, label, Icon }) => {
