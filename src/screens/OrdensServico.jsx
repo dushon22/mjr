@@ -195,7 +195,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
     const ag = osAtual.agendamentos
     return (
       <div style={{ minHeight: '100vh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
-        <header style={{ background: '#171717', padding: '24px 20px' }}>
+        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <button
             type="button"
             onClick={fecharView}
@@ -328,7 +328,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
     const ag = osAtual.agendamentos
     return (
       <div style={{ minHeight: '100vh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
-        <header style={{ background: '#171717', padding: '24px 20px' }}>
+        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <button
             type="button"
             onClick={fecharView}
@@ -423,7 +423,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
 
   return (
     <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: '#171717', padding: '24px 20px' }}>
+      <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Ordens de serviço
         </h1>

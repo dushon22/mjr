@@ -54,7 +54,7 @@ function Login() {
         boxSizing: 'border-box',
       }}
     >
-      <header style={{ padding: '24px 20px', textAlign: 'center' }}>
+      <header style={{ padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)', textAlign: 'center' }}>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.01em' }}>
           <span style={{ color: '#FFFFFF' }}>MJR</span>{' '}
           <span style={{ color: '#14304D' }}>Film</span>

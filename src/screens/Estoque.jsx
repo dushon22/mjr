@@ -200,7 +200,7 @@ function Estoque({ setActiveTab }) {
     const tiposSelecionaveis = tipos.filter((t) => t.ativo || t.id === itemEditando?.tipo_id)
     return (
       <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
-        <header style={{ background: '#171717', padding: '24px 20px' }}>
+        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             {itemEditando ? 'Editar rolo' : 'Novo rolo'}
           </h1>
@@ -405,8 +405,8 @@ function Estoque({ setActiveTab }) {
   }
 
   return (
-    <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: '#171717', padding: '24px 20px' }}>
+    <div style={{ paddingBottom: 'calc(172px + env(safe-area-inset-bottom))' }}>
+      <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             Estoque
@@ -552,21 +552,7 @@ function Estoque({ setActiveTab }) {
           limparCampos()
           setMostrarForm(true)
         }}
-        style={{
-          position: 'fixed',
-          right: 20,
-          bottom: 90,
-          width: 56,
-          height: 56,
-          borderRadius: '50%',
-          background: '#14304D',
-          color: '#FFFFFF',
-          border: 'none',
-          fontSize: 28,
-          lineHeight: 1,
-          cursor: 'pointer',
-          boxShadow: '0 4px 12px rgba(20,48,77,0.3)',
-        }}
+        className="fab"
       >
         +
       </button>

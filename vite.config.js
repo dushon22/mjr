@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'MJR Film',
         short_name: 'MJR Film',
         description: 'Gestão de clientes, estoque, financeiro e agendamento',
-        theme_color: '#171717',
-        background_color: '#171717',
+        theme_color: '#161616',
+        background_color: '#161616',
         display: 'standalone',
         start_url: '/',
         icons: [

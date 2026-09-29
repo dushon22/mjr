@@ -187,4 +187,27 @@ code {
     font-size: 12px;
     font-weight: 500;
   }
+
+  .fab {
+    right: 16px;
+    bottom: calc(env(safe-area-inset-bottom) + 10px + 64px + 16px);
+    z-index: 90;
+  }
+}
+
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: 90px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #14304d;
+  color: #ffffff;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20, 48, 77, 0.3);
+  z-index: 90;
 }
