@@ -422,7 +422,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
   ]
 
   return (
-    <div style={{ background: 'var(--bg)', paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
+    <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Ordens de serviço

@@ -405,7 +405,7 @@ function Estoque({ setActiveTab }) {
   }
 
   return (
-    <div style={{ background: 'var(--bg)', paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
+    <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
