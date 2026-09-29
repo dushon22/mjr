@@ -27,6 +27,7 @@ function App() {
   const [session, setSession] = useState(null)
   const [activeTab, setActiveTab] = useState('inicio')
   const [osAlvo, setOsAlvo] = useState(null) // { id, modo: 'fechar' | 'detalhes' }
+  const [visitados, setVisitados] = useState(['inicio'])
 
   function abrirOS(id, modo) {
     setOsAlvo({ id, modo })
@@ -45,22 +46,31 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Mantém as telas já visitadas montadas (só escondidas), para trocar de aba
+  // sem remontar/recarregar tudo de novo a cada toque.
+  useEffect(() => {
+    setVisitados((atual) => (atual.includes(activeTab) ? atual : [...atual, activeTab]))
+  }, [activeTab])
+
   if (!session) {
     return <Login />
   }
 
-  const ActiveScreen = SCREENS[activeTab]
-
   return (
     <>
-      <div key={activeTab} className="screen-transition">
-        <ActiveScreen
-          setActiveTab={setActiveTab}
-          abrirOS={abrirOS}
-          osAlvo={osAlvo}
-          limparOsAlvo={() => setOsAlvo(null)}
-        />
-      </div>
+      {visitados.map((tab) => {
+        const Screen = SCREENS[tab]
+        return (
+          <div key={tab} style={{ display: tab === activeTab ? 'contents' : 'none' }}>
+            <Screen
+              setActiveTab={setActiveTab}
+              abrirOS={abrirOS}
+              osAlvo={osAlvo}
+              limparOsAlvo={() => setOsAlvo(null)}
+            />
+          </div>
+        )
+      })}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </>
   )

@@ -253,7 +253,7 @@ function Estoque({ setActiveTab }) {
                   type="text"
                   placeholder="Material"
                   required
-                  list="materiais-sugeridos"
+                  list="materiais-sugeridos-estoque"
                   value={novoTipoMaterial}
                   onChange={(e) => setNovoTipoMaterial(e.target.value)}
                   style={campo}
@@ -261,7 +261,7 @@ function Estoque({ setActiveTab }) {
                 <input
                   type="text"
                   placeholder="Coloração (opcional)"
-                  list="coloracoes-sugeridas"
+                  list="coloracoes-sugeridas-estoque"
                   value={novoTipoColoracao}
                   onChange={(e) => setNovoTipoColoracao(e.target.value)}
                   style={campo}
@@ -273,14 +273,14 @@ function Estoque({ setActiveTab }) {
                   onChange={(e) => setNovoTipoMarca(e.target.value)}
                   style={campo}
                 />
-                <datalist id="materiais-sugeridos">
+                <datalist id="materiais-sugeridos-estoque">
                   <option value="Nano Ceramic" />
                   <option value="PAP" />
                   <option value="Fumê" />
                   <option value="Espelhado" />
                   <option value="Segurança" />
                 </datalist>
-                <datalist id="coloracoes-sugeridas">
+                <datalist id="coloracoes-sugeridas-estoque">
                   <option value="G5" />
                   <option value="G20" />
                   <option value="G35" />

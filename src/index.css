@@ -151,6 +151,8 @@ code {
   border-radius: 16px;
   color: #6b7280;
   transition: background 0.15s, color 0.15s, transform 150ms ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .bottom-nav-item:active {
@@ -263,24 +265,10 @@ code {
   }
 }
 
-@keyframes screen-enter {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.screen-transition {
-  animation: screen-enter 150ms ease-out;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .bottom-nav-indicador,
   .bottom-nav-item,
-  .bottom-nav-label,
-  .screen-transition {
+  .bottom-nav-label {
     transition: none;
     animation: none;
   }

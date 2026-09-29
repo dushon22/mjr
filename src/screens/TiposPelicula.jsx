@@ -121,12 +121,12 @@ function TiposPelicula({ setActiveTab }) {
             <input
               type="text"
               required
-              list="materiais-sugeridos"
+              list="materiais-sugeridos-tipos"
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
               style={campo}
             />
-            <datalist id="materiais-sugeridos">
+            <datalist id="materiais-sugeridos-tipos">
               <option value="Nano Ceramic" />
               <option value="PAP" />
               <option value="Fumê" />
@@ -138,12 +138,12 @@ function TiposPelicula({ setActiveTab }) {
             Coloração
             <input
               type="text"
-              list="coloracoes-sugeridas"
+              list="coloracoes-sugeridas-tipos"
               value={coloracao}
               onChange={(e) => setColoracao(e.target.value)}
               style={campo}
             />
-            <datalist id="coloracoes-sugeridas">
+            <datalist id="coloracoes-sugeridas-tipos">
               <option value="G5" />
               <option value="G20" />
               <option value="G35" />
