@@ -188,17 +188,12 @@ code {
     font-weight: 500;
   }
 
-  .fab {
-    right: 16px;
-    bottom: calc(env(safe-area-inset-bottom) + 90px);
-    z-index: 90;
-  }
 }
 
 .fab {
   position: fixed;
-  right: 20px;
-  bottom: 90px;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom) + 90px);
   width: 56px;
   height: 56px;
   border-radius: 50%;
