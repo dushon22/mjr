@@ -108,7 +108,7 @@ function Inicio({ setActiveTab }) {
   }
 
   return (
-    <div style={{ paddingBottom: 80 }}>
+    <div style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px' }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
           <span style={{ color: '#FFFFFF' }}>MJR</span>{' '}
@@ -138,7 +138,7 @@ function Inicio({ setActiveTab }) {
               key={stat.label}
               style={{
                 background: '#FFFFFF',
-                border: `1px solid ${stat.alert ? '#A6332C' : '#E2E0DC'}`,
+                border: `1px solid ${stat.alert ? '#A6332C' : '#E4E7EC'}`,
                 borderRadius: 12,
                 padding: 16,
               }}
@@ -173,7 +173,7 @@ function Inicio({ setActiveTab }) {
             </h3>
             <button
               onClick={() => setActiveTab('agenda')}
-              style={{ color: '#A6332C', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              style={{ color: '#14304D', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
             >
               Ver agenda
             </button>
@@ -192,7 +192,7 @@ function Inicio({ setActiveTab }) {
                   alignItems: 'center',
                   gap: 12,
                   background: '#FFFFFF',
-                  border: '1px solid #E2E0DC',
+                  border: '1px solid #E4E7EC',
                   borderRadius: 12,
                   padding: 12,
                   marginBottom: 10,
@@ -251,7 +251,7 @@ function Inicio({ setActiveTab }) {
             </h3>
             <button
               onClick={() => setActiveTab('estoque')}
-              style={{ color: '#A6332C', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              style={{ color: '#14304D', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
             >
               Ver estoque
             </button>

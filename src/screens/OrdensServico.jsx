@@ -186,7 +186,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
     boxSizing: 'border-box',
     padding: '12px',
     borderRadius: 10,
-    border: '1px solid #E2E0DC',
+    border: '1px solid #E4E7EC',
     fontSize: 14,
     background: '#FFFFFF',
   }
@@ -194,7 +194,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
   if (view === 'fechar' && osAtual) {
     const ag = osAtual.agendamentos
     return (
-      <div style={{ minHeight: '100vh', background: '#FFFFFF', paddingBottom: 40 }}>
+      <div style={{ minHeight: '100vh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
         <header style={{ background: '#171717', padding: '24px 20px' }}>
           <button
             type="button"
@@ -208,6 +208,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
           </h1>
           <p style={{ margin: '4px 0 0', color: '#CFCFCF', fontSize: 13 }}>
             {ag?.clientes?.nome || 'Sem cliente'} · {ag?.tipos_pelicula?.nome || 'Tipo removido'}
+            {ag?.veiculo_modelo ? ` · ${ag.veiculo_modelo}` : ''}
           </p>
         </header>
 
@@ -235,10 +236,10 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
                 <div
                   key={rolo.id}
                   style={{
-                    border: `1px solid ${marcado ? '#A6332C' : '#E2E0DC'}`,
+                    border: `1px solid ${marcado ? '#14304D' : '#E4E7EC'}`,
                     borderRadius: 12,
                     padding: 12,
-                    background: marcado ? '#FCF3F1' : '#FFFFFF',
+                    background: marcado ? '#E4EAF1' : '#FFFFFF',
                   }}
                 >
                   <div
@@ -309,7 +310,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
               padding: 12,
               borderRadius: 10,
               border: 'none',
-              background: '#A6332C',
+              background: '#14304D',
               color: '#FFFFFF',
               fontWeight: 600,
               cursor: 'pointer',
@@ -326,7 +327,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
   if (view === 'detalhes' && osAtual) {
     const ag = osAtual.agendamentos
     return (
-      <div style={{ minHeight: '100vh', background: '#FFFFFF', paddingBottom: 40 }}>
+      <div style={{ minHeight: '100vh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
         <header style={{ background: '#171717', padding: '24px 20px' }}>
           <button
             type="button"
@@ -340,6 +341,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
           </h1>
           <p style={{ margin: '4px 0 0', color: '#CFCFCF', fontSize: 13 }}>
             {ag?.clientes?.nome || 'Sem cliente'} · {ag?.tipos_pelicula?.nome || 'Tipo removido'}
+            {ag?.veiculo_modelo ? ` · ${ag.veiculo_modelo}` : ''}
           </p>
         </header>
 
@@ -355,7 +357,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
                 flexDirection: 'column',
                 gap: 8,
                 background: '#FFFFFF',
-                border: '1px solid #E2E0DC',
+                border: '1px solid #E4E7EC',
                 borderRadius: 12,
                 padding: 12,
               }}
@@ -398,7 +400,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     background: '#FFFFFF',
-                    border: '1px solid #E2E0DC',
+                    border: '1px solid #E4E7EC',
                     borderRadius: 12,
                     padding: 12,
                   }}
@@ -420,7 +422,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
   ]
 
   return (
-    <div style={{ paddingBottom: 90 }}>
+    <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Ordens de serviço
@@ -456,12 +458,12 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
                       display: 'flex',
                       alignItems: 'stretch',
                       background: '#FFFFFF',
-                      border: '1px solid #E2E0DC',
+                      border: '1px solid #E4E7EC',
                       borderRadius: 12,
                       overflow: 'hidden',
                     }}
                   >
-                    <div style={{ width: 4, background: aberta ? '#A6332C' : '#8A8A8A' }} />
+                    <div style={{ width: 4, background: aberta ? '#14304D' : '#8A8A8A' }} />
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, padding: 12 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontWeight: 600 }}>{ag?.clientes?.nome || 'Sem cliente'}</span>
@@ -472,8 +474,8 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
                             fontWeight: 600,
                             padding: '4px 10px',
                             borderRadius: 999,
-                            background: aberta ? '#F5DAD6' : '#E9F3E9',
-                            color: aberta ? '#A6332C' : '#4C7A4E',
+                            background: aberta ? '#E4EAF1' : '#E9F3E9',
+                            color: aberta ? '#14304D' : '#4C7A4E',
                           }}
                         >
                           {aberta ? 'Aberta' : 'Fechada'}
@@ -481,6 +483,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
                       </div>
                       <div style={{ fontSize: 13, color: '#8A8A8A', textAlign: 'left' }}>
                         {ag?.tipos_pelicula?.nome || 'Tipo removido'} · {ag?.servico}
+                        {ag?.veiculo_modelo ? ` · ${ag.veiculo_modelo}` : ''}
                       </div>
                       <div style={{ fontSize: 13, color: '#8A8A8A', textAlign: 'left' }}>
                         {formatarData(ag?.data)} {ag?.hora?.slice(0, 5)}

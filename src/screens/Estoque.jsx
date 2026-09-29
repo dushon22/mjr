@@ -192,7 +192,7 @@ function Estoque({ setActiveTab }) {
       boxSizing: 'border-box',
       padding: '12px',
       borderRadius: 10,
-      border: '1px solid #E2E0DC',
+      border: '1px solid #E4E7EC',
       fontSize: 14,
       background: '#FFFFFF',
     }
@@ -238,7 +238,7 @@ function Estoque({ setActiveTab }) {
               <option value="__novo__">+ Novo tipo</option>
             </select>
             {novoTipoAtivo && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #E2E0DC', borderRadius: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #D0D5DD', borderRadius: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo tipo de película</span>
                   <button
@@ -295,7 +295,7 @@ function Estoque({ setActiveTab }) {
                     padding: 10,
                     borderRadius: 10,
                     border: 'none',
-                    background: '#A6332C',
+                    background: '#14304D',
                     color: '#FFFFFF',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -353,7 +353,7 @@ function Estoque({ setActiveTab }) {
                 flex: 1,
                 padding: 12,
                 borderRadius: 10,
-                border: '1px solid #E2E0DC',
+                border: '1px solid #E4E7EC',
                 background: '#FFFFFF',
                 color: '#4A4A4A',
                 fontWeight: 600,
@@ -389,7 +389,7 @@ function Estoque({ setActiveTab }) {
                 padding: 12,
                 borderRadius: 10,
                 border: 'none',
-                background: '#A6332C',
+                background: '#14304D',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -405,7 +405,7 @@ function Estoque({ setActiveTab }) {
   }
 
   return (
-    <div style={{ paddingBottom: 90 }}>
+    <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
@@ -559,13 +559,13 @@ function Estoque({ setActiveTab }) {
           width: 56,
           height: 56,
           borderRadius: '50%',
-          background: '#A6332C',
+          background: '#14304D',
           color: '#FFFFFF',
           border: 'none',
           fontSize: 28,
           lineHeight: 1,
           cursor: 'pointer',
-          boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+          boxShadow: '0 4px 12px rgba(20,48,77,0.3)',
         }}
       >
         +

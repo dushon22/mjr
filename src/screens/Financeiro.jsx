@@ -192,7 +192,7 @@ function Financeiro() {
       boxSizing: 'border-box',
       padding: '12px',
       borderRadius: 10,
-      border: '1px solid #E2E0DC',
+      border: '1px solid #E4E7EC',
       fontSize: 14,
       background: '#FFFFFF',
     }
@@ -240,7 +240,7 @@ function Financeiro() {
                 flex: 1,
                 padding: 12,
                 borderRadius: 10,
-                border: '1px solid #E2E0DC',
+                border: '1px solid #E4E7EC',
                 background: '#FFFFFF',
                 color: '#4A4A4A',
                 fontWeight: 600,
@@ -257,7 +257,7 @@ function Financeiro() {
                 padding: 12,
                 borderRadius: 10,
                 border: 'none',
-                background: '#A6332C',
+                background: '#14304D',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -337,7 +337,7 @@ function Financeiro() {
   ]
 
   return (
-    <div style={{ paddingBottom: 90 }}>
+    <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Financeiro
@@ -487,7 +487,7 @@ function Financeiro() {
                       display: 'flex',
                       alignItems: 'stretch',
                       background: '#FFFFFF',
-                      border: '1px solid #E2E0DC',
+                      border: '1px solid #E4E7EC',
                       borderRadius: 12,
                       overflow: 'hidden',
                     }}
@@ -535,13 +535,13 @@ function Financeiro() {
           width: 56,
           height: 56,
           borderRadius: '50%',
-          background: '#A6332C',
+          background: '#14304D',
           color: '#FFFFFF',
           border: 'none',
           fontSize: 28,
           lineHeight: 1,
           cursor: 'pointer',
-          boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+          boxShadow: '0 4px 12px rgba(20,48,77,0.3)',
         }}
       >
         +

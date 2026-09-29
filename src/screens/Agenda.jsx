@@ -111,6 +111,7 @@ function Agenda({ abrirOS }) {
   const [novoClienteAtivo, setNovoClienteAtivo] = useState(false)
   const [novoClienteNome, setNovoClienteNome] = useState('')
   const [novoClienteTelefone, setNovoClienteTelefone] = useState('')
+  const [veiculoModelo, setVeiculoModelo] = useState('')
   const [tipoSelecionado, setTipoSelecionado] = useState('')
   const [novoTipoAtivo, setNovoTipoAtivo] = useState(false)
   const [novoTipoMaterial, setNovoTipoMaterial] = useState('')
@@ -138,6 +139,7 @@ function Agenda({ abrirOS }) {
     setNovoClienteAtivo(false)
     setNovoClienteNome('')
     setNovoClienteTelefone('')
+    setVeiculoModelo('')
     setTipoSelecionado('')
     setNovoTipoAtivo(false)
     setNovoTipoMaterial('')
@@ -158,6 +160,7 @@ function Agenda({ abrirOS }) {
     setNovoClienteAtivo(false)
     setNovoClienteNome('')
     setNovoClienteTelefone('')
+    setVeiculoModelo(ag.veiculo_modelo ?? '')
     setTipoSelecionado(ag.tipo_id ?? '')
     setNovoTipoAtivo(false)
     setNovoTipoMaterial('')
@@ -175,6 +178,7 @@ function Agenda({ abrirOS }) {
     setClienteSelecionadoId(c.id)
     setClienteBusca(c.nome)
     setClienteDropdownAberto(false)
+    setVeiculoModelo(c.veiculo_modelo ?? '')
   }
 
   function abrirCadastroCliente() {
@@ -263,7 +267,7 @@ function Agenda({ abrirOS }) {
   async function carregarClientes() {
     const { data: dados, error } = await supabase
       .from('clientes')
-      .select('id, nome, telefone')
+      .select('id, nome, telefone, veiculo_modelo')
       .order('nome', { ascending: true })
     if (error) {
       console.error('Erro ao buscar clientes:', error)
@@ -332,6 +336,7 @@ function Agenda({ abrirOS }) {
       data,
       hora,
       local,
+      veiculo_modelo: veiculoModelo,
     }
     const { error } = agendamentoEditando
       ? await supabase.from('agendamentos').update(dados).eq('id', agendamentoEditando.id)
@@ -367,7 +372,7 @@ function Agenda({ abrirOS }) {
       boxSizing: 'border-box',
       padding: '12px',
       borderRadius: 10,
-      border: '1px solid #E2E0DC',
+      border: '1px solid #E4E7EC',
       fontSize: 14,
       background: '#FFFFFF',
     }
@@ -424,7 +429,7 @@ function Agenda({ abrirOS }) {
                       zIndex: 10,
                       marginTop: 4,
                       background: '#FFFFFF',
-                      border: '1px solid #E2E0DC',
+                      border: '1px solid #E4E7EC',
                       borderRadius: 10,
                       maxHeight: 200,
                       overflowY: 'auto',
@@ -444,7 +449,7 @@ function Agenda({ abrirOS }) {
                     {termoBuscaCliente && clientesFiltrados.length === 0 && (
                       <div
                         onMouseDown={abrirCadastroCliente}
-                        style={{ padding: '10px 12px', cursor: 'pointer', fontSize: 14, color: '#A6332C', fontWeight: 600 }}
+                        style={{ padding: '10px 12px', cursor: 'pointer', fontSize: 14, color: '#14304D', fontWeight: 600 }}
                       >
                         + Cadastrar "{clienteBusca.trim()}"
                       </div>
@@ -459,7 +464,7 @@ function Agenda({ abrirOS }) {
               </div>
             )}
             {novoClienteAtivo && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #E2E0DC', borderRadius: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #D0D5DD', borderRadius: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo cliente</span>
                   <button
@@ -487,6 +492,16 @@ function Agenda({ abrirOS }) {
               </div>
             )}
           </div>
+          <label style={rotulo}>
+            Modelo do veículo
+            <input
+              type="text"
+              placeholder="Ex: Corolla 2020"
+              value={veiculoModelo}
+              onChange={(e) => setVeiculoModelo(e.target.value)}
+              style={campo}
+            />
+          </label>
           <div style={rotulo}>
             <span>Tipo de película</span>
             <select
@@ -511,7 +526,7 @@ function Agenda({ abrirOS }) {
               <option value="__novo__">+ Novo tipo</option>
             </select>
             {novoTipoAtivo && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #E2E0DC', borderRadius: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #D0D5DD', borderRadius: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo tipo de película</span>
                   <button
@@ -568,7 +583,7 @@ function Agenda({ abrirOS }) {
                     padding: 10,
                     borderRadius: 10,
                     border: 'none',
-                    background: '#A6332C',
+                    background: '#14304D',
                     color: '#FFFFFF',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -623,7 +638,7 @@ function Agenda({ abrirOS }) {
                 flex: 1,
                 padding: 12,
                 borderRadius: 10,
-                border: '1px solid #E2E0DC',
+                border: '1px solid #E4E7EC',
                 background: '#FFFFFF',
                 color: '#4A4A4A',
                 fontWeight: 600,
@@ -659,7 +674,7 @@ function Agenda({ abrirOS }) {
                 padding: 12,
                 borderRadius: 10,
                 border: 'none',
-                background: '#A6332C',
+                background: '#14304D',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -728,7 +743,7 @@ function Agenda({ abrirOS }) {
   }
 
   return (
-    <div style={{ paddingBottom: 90 }}>
+    <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
@@ -776,7 +791,7 @@ function Agenda({ abrirOS }) {
                     borderRadius: 10,
                     padding: '10px 0',
                     cursor: 'pointer',
-                    background: ativo ? '#A6332C' : '#232323',
+                    background: ativo ? '#14304D' : '#232323',
                     color: ativo ? '#FFFFFF' : '#CFCFCF',
                   }}
                 >
@@ -810,7 +825,7 @@ function Agenda({ abrirOS }) {
                 const status = calcularStatusAgendamento(item)
                 const concluido = status.label === 'Concluído'
                 const valorExibido = concluido ? status.os?.valor_pago : item.valor
-                const servicoPelicula = [item.servico, item.tipos_pelicula?.nome].filter(Boolean).join(' · ')
+                const servicoPelicula = [item.servico, item.tipos_pelicula?.nome, item.veiculo_modelo].filter(Boolean).join(' · ')
                 return (
                   <div key={item.id ?? index} style={{ display: 'flex', gap: 12 }}>
                     <div style={{ width: 48, flexShrink: 0, fontWeight: 700 }}>
@@ -827,14 +842,15 @@ function Agenda({ abrirOS }) {
                       style={{
                         flex: 1,
                         background: '#FFFFFF',
-                        border: '1px solid #E2E0DC',
+                        border: '1px solid #E4E7EC',
                         borderLeft: `4px solid ${status.corBorda}`,
-                        borderRadius: 12,
-                        padding: 12,
+                        borderRadius: 14,
+                        padding: 14,
                         cursor: 'pointer',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 4,
+                        boxShadow: '0 1px 2px rgba(16,24,40,0.06)',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -910,13 +926,13 @@ function Agenda({ abrirOS }) {
           width: 56,
           height: 56,
           borderRadius: '50%',
-          background: '#A6332C',
+          background: '#14304D',
           color: '#FFFFFF',
           border: 'none',
           fontSize: 28,
           lineHeight: 1,
           cursor: 'pointer',
-          boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+          boxShadow: '0 4px 12px rgba(20,48,77,0.3)',
         }}
       >
         +
@@ -988,7 +1004,7 @@ function Agenda({ abrirOS }) {
                     gap: 4,
                     borderRadius: 10,
                     cursor: 'pointer',
-                    background: ativo ? '#A6332C' : '#232323',
+                    background: ativo ? '#14304D' : '#232323',
                     color: ativo ? '#FFFFFF' : '#CFCFCF',
                     fontSize: 15,
                     fontWeight: 600,
@@ -1001,7 +1017,7 @@ function Agenda({ abrirOS }) {
                       height: 6,
                       borderRadius: '50%',
                       background: diasComAgendamento.has(iso)
-                        ? ativo ? '#FFFFFF' : '#A6332C'
+                        ? ativo ? '#FFFFFF' : '#14304D'
                         : 'transparent',
                     }}
                   />

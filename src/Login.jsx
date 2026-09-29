@@ -55,9 +55,9 @@ function Login() {
       }}
     >
       <header style={{ padding: '24px 20px', textAlign: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: '-0.01em' }}>
           <span style={{ color: '#FFFFFF' }}>MJR</span>{' '}
-          <span style={{ color: '#A6332C' }}>Film</span>
+          <span style={{ color: '#14304D' }}>Film</span>
         </h1>
       </header>
 
@@ -110,7 +110,7 @@ function Login() {
               padding: 12,
               borderRadius: 10,
               border: 'none',
-              background: '#A6332C',
+              background: '#14304D',
               color: '#FFFFFF',
               fontSize: 14,
               fontWeight: 600,

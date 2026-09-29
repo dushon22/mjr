@@ -24,6 +24,7 @@ function Clientes() {
   const [telefone, setTelefone] = useState('')
   const [tipo, setTipo] = useState('automotivo')
   const [veiculoImovel, setVeiculoImovel] = useState('')
+  const [veiculoModelo, setVeiculoModelo] = useState('')
   const [salvando, setSalvando] = useState(false)
 
   const [clienteEditando, setClienteEditando] = useState(null)
@@ -33,6 +34,7 @@ function Clientes() {
     setTelefone('')
     setTipo('automotivo')
     setVeiculoImovel('')
+    setVeiculoModelo('')
   }
 
   function abrirEdicao(cliente) {
@@ -41,6 +43,7 @@ function Clientes() {
     setTelefone(cliente.telefone ?? '')
     setTipo(cliente.tipo ?? 'automotivo')
     setVeiculoImovel(cliente.veiculo_imovel ?? '')
+    setVeiculoModelo(cliente.veiculo_modelo ?? '')
     setMostrarForm(true)
   }
 
@@ -71,7 +74,7 @@ function Clientes() {
     e.preventDefault()
     if (clienteEditando && !window.confirm('Salvar alterações deste cliente?')) return
     setSalvando(true)
-    const dados = { nome, telefone, tipo, veiculo_imovel: veiculoImovel }
+    const dados = { nome, telefone, tipo, veiculo_imovel: veiculoImovel, veiculo_modelo: veiculoModelo }
     const { error } = clienteEditando
       ? await supabase.from('clientes').update(dados).eq('id', clienteEditando.id)
       : await supabase.from('clientes').insert({ ...dados, status: 'em_dia' })
@@ -123,7 +126,7 @@ function Clientes() {
       boxSizing: 'border-box',
       padding: '12px',
       borderRadius: 10,
-      border: '1px solid #E2E0DC',
+      border: '1px solid #E4E7EC',
       fontSize: 14,
       background: '#FFFFFF',
     }
@@ -168,6 +171,18 @@ function Clientes() {
               <input type="text" value={veiculoImovel} onChange={(e) => setVeiculoImovel(e.target.value)} style={campo} />
             )}
           </label>
+          {tipo === 'automotivo' && (
+            <label style={rotulo}>
+              Modelo do veículo
+              <input
+                type="text"
+                placeholder="Ex: Corolla 2020"
+                value={veiculoModelo}
+                onChange={(e) => setVeiculoModelo(e.target.value)}
+                style={campo}
+              />
+            </label>
+          )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               type="button"
@@ -176,7 +191,7 @@ function Clientes() {
                 flex: 1,
                 padding: 12,
                 borderRadius: 10,
-                border: '1px solid #E2E0DC',
+                border: '1px solid #E4E7EC',
                 background: '#FFFFFF',
                 color: '#4A4A4A',
                 fontWeight: 600,
@@ -212,7 +227,7 @@ function Clientes() {
                 padding: 12,
                 borderRadius: 10,
                 border: 'none',
-                background: '#A6332C',
+                background: '#14304D',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -228,7 +243,7 @@ function Clientes() {
   }
 
   return (
-    <div style={{ paddingBottom: 90 }}>
+    <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Clientes
@@ -292,7 +307,7 @@ function Clientes() {
         })}
       </div>
 
-      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {loading && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
         {!loading && clientes.length === 0 && (
           <div style={{ color: '#8A8A8A' }}>Nenhum cliente cadastrado ainda.</div>
@@ -310,9 +325,10 @@ function Clientes() {
                 alignItems: 'center',
                 gap: 12,
                 background: '#FFFFFF',
-                border: '1px solid #E2E0DC',
-                borderRadius: 12,
-                padding: 12,
+                border: '1px solid #E4E7EC',
+                borderRadius: 14,
+                padding: 14,
+                boxShadow: '0 1px 2px rgba(16,24,40,0.06)',
               }}
             >
               <div
@@ -325,8 +341,8 @@ function Clientes() {
                   justifyContent: 'center',
                   flexShrink: 0,
                   fontWeight: 700,
-                  background: rosa ? '#F0DEDC' : '#EFEFEF',
-                  color: rosa ? '#A6332C' : '#4A4A4A',
+                  background: rosa ? '#E4EAF1' : '#EFEFEF',
+                  color: rosa ? '#14304D' : '#4A4A4A',
                 }}
               >
                 {iniciais(cliente.nome)}
@@ -336,6 +352,7 @@ function Clientes() {
                 <div style={{ fontWeight: 600 }}>{cliente.nome}</div>
                 <div style={{ fontSize: 13, color: '#8A8A8A' }}>
                   {cliente.tipo === 'automotivo' ? formatarPlaca(cliente.veiculo_imovel) : cliente.veiculo_imovel}
+                  {cliente.tipo === 'automotivo' && cliente.veiculo_modelo && ` · ${cliente.veiculo_modelo}`}
                   {' · '}
                   {formatarTelefone(cliente.telefone)}
                 </div>
@@ -373,13 +390,13 @@ function Clientes() {
           width: 56,
           height: 56,
           borderRadius: '50%',
-          background: '#A6332C',
+          background: '#14304D',
           color: '#FFFFFF',
           border: 'none',
           fontSize: 28,
           lineHeight: 1,
           cursor: 'pointer',
-          boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+          boxShadow: '0 4px 12px rgba(20,48,77,0.3)',
         }}
       >
         +
