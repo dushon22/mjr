@@ -214,7 +214,7 @@ function TiposPelicula({ setActiveTab }) {
   }
 
   return (
-    <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
+    <div style={{ background: 'var(--bg)', paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <button
           type="button"

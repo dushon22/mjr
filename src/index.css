@@ -20,7 +20,7 @@
   letter-spacing: normal;
   color-scheme: light dark;
   color: var(--text);
-  background: var(--bg);
+  background: #171717;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -45,6 +45,11 @@
   #social .button-icon {
     filter: invert(1) brightness(2);
   }
+}
+
+html,
+body {
+  background: #171717;
 }
 
 body {
