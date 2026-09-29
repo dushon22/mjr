@@ -190,7 +190,7 @@ code {
 
   .fab {
     right: 16px;
-    bottom: calc(env(safe-area-inset-bottom) + 10px + 64px + 16px);
+    bottom: calc(env(safe-area-inset-bottom) + 90px);
     z-index: 90;
   }
 }
