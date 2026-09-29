@@ -53,12 +53,14 @@ function App() {
 
   return (
     <>
-      <ActiveScreen
-        setActiveTab={setActiveTab}
-        abrirOS={abrirOS}
-        osAlvo={osAlvo}
-        limparOsAlvo={() => setOsAlvo(null)}
-      />
+      <div key={activeTab} className="screen-transition">
+        <ActiveScreen
+          setActiveTab={setActiveTab}
+          abrirOS={abrirOS}
+          osAlvo={osAlvo}
+          limparOsAlvo={() => setOsAlvo(null)}
+        />
+      </div>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </>
   )
