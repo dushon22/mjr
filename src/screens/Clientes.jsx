@@ -127,7 +127,7 @@ function Clientes() {
       padding: '12px',
       borderRadius: 10,
       border: '1px solid #E4E7EC',
-      fontSize: 14,
+      fontSize: 16,
       background: '#FFFFFF',
     }
     const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
@@ -269,7 +269,7 @@ function Clientes() {
               border: 'none',
               outline: 'none',
               color: '#FFFFFF',
-              fontSize: 14,
+              fontSize: 16,
             }}
           />
         </div>

@@ -187,7 +187,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
     padding: '12px',
     borderRadius: 10,
     border: '1px solid #E4E7EC',
-    fontSize: 14,
+    fontSize: 16,
     background: '#FFFFFF',
   }
 

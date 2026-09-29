@@ -40,7 +40,7 @@ function Login() {
     border: '1px solid #3A3A3A',
     background: '#232323',
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
   }
 
   return (
