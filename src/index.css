@@ -153,16 +153,14 @@ code {
     left: 12px;
     right: 12px;
     width: calc(100% - 24px);
-    bottom: calc(env(safe-area-inset-bottom) + 12px);
+    height: 64px;
+    bottom: calc(env(safe-area-inset-bottom) + 10px);
     border-radius: 28px;
-    border-top: none;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow:
-      0 8px 24px rgba(16, 24, 40, 0.12),
-      0 2px 8px rgba(16, 24, 40, 0.08);
-    padding: 8px 10px calc(env(safe-area-inset-bottom) + 8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #1f2129;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    padding: 0 10px;
+    align-items: center;
     justify-content: space-between;
     overflow-x: hidden;
   }
@@ -172,6 +170,12 @@ code {
     flex-shrink: 0;
     gap: 6px;
     padding: 8px 10px;
+    color: #9aa0ad;
+  }
+
+  .bottom-nav-item.active {
+    color: #7db2ff;
+    background: rgba(59, 130, 246, 0.18);
   }
 
   .bottom-nav-label {

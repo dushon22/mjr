@@ -173,7 +173,7 @@ function Inicio({ setActiveTab }) {
             </h3>
             <button
               onClick={() => setActiveTab('agenda')}
-              style={{ color: '#14304D', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              style={{ color: '#7db2ff', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
             >
               Ver agenda
             </button>
@@ -251,7 +251,7 @@ function Inicio({ setActiveTab }) {
             </h3>
             <button
               onClick={() => setActiveTab('estoque')}
-              style={{ color: '#14304D', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              style={{ color: '#7db2ff', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
             >
               Ver estoque
             </button>
