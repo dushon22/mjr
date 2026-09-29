@@ -62,6 +62,19 @@ textarea {
   font-family: inherit;
 }
 
+input,
+select,
+textarea {
+  color: #1a1a1a;
+  -webkit-text-fill-color: #1a1a1a;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #8a8f98;
+  -webkit-text-fill-color: #8a8f98;
+}
+
 #root {
   width: 1126px;
   max-width: 100%;

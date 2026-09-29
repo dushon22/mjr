@@ -26,6 +26,53 @@ function formatarValor(valor) {
 
 const FORMAS_PAGAMENTO = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Transferência']
 
+function ItensEObservacao({ ag }) {
+  const itens = ag?.agendamento_itens ?? []
+  const observacaoAgendamento = ag?.observacao
+  const observacaoCliente = ag?.clientes?.observacao
+  if (itens.length === 0 && !observacaoAgendamento && !observacaoCliente) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {itens.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+            Itens
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {itens.map((item) => (
+              <div
+                key={item.id}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', border: '1px solid #E4E7EC', borderRadius: 12, padding: 12 }}
+              >
+                <span style={{ fontWeight: 600 }}>
+                  {item.servicos?.nome || 'Serviço removido'}
+                  {item.servicos?.unidade === 'm2' ? ` (${item.quantidade} m²)` : ''}
+                </span>
+                <span>{formatarValor(item.valor)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {(observacaoAgendamento || observacaoCliente) && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+            Observação
+          </div>
+          {observacaoAgendamento && (
+            <p style={{ margin: 0, fontSize: 13, whiteSpace: 'pre-wrap' }}>{observacaoAgendamento}</p>
+          )}
+          {observacaoCliente && (
+            <p style={{ margin: observacaoAgendamento ? '8px 0 0' : 0, fontSize: 13, color: '#8A8A8A', whiteSpace: 'pre-wrap' }}>
+              {observacaoCliente}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function OrdensServico({ osAlvo, limparOsAlvo }) {
   const [ordens, setOrdens] = useState([])
   const [loading, setLoading] = useState(true)
@@ -47,7 +94,7 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
   async function carregarOrdens() {
     const { data, error } = await supabase
       .from('ordens_servico')
-      .select('*, agendamentos(*, clientes(nome), tipos_pelicula(nome))')
+      .select('*, agendamentos(*, clientes(nome, observacao), tipos_pelicula(nome), agendamento_itens(*, servicos(nome, unidade)))')
       .order('created_at', { ascending: false })
     if (error) {
       console.error('Erro ao buscar ordens de serviço:', error)
@@ -220,6 +267,8 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
             gap: 16,
           }}
         >
+          <ItensEObservacao ag={ag} />
+
           <div style={{ fontSize: 13, color: '#8A8A8A' }}>
             Selecione um ou mais rolos do tipo <strong>{ag?.tipos_pelicula?.nome}</strong> e informe os metros usados de cada um.
           </div>
@@ -382,6 +431,8 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
               )}
             </div>
           )}
+
+          <ItensEObservacao ag={ag} />
 
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>

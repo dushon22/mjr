@@ -25,6 +25,7 @@ function Clientes() {
   const [tipo, setTipo] = useState('automotivo')
   const [veiculoImovel, setVeiculoImovel] = useState('')
   const [veiculoModelo, setVeiculoModelo] = useState('')
+  const [observacao, setObservacao] = useState('')
   const [salvando, setSalvando] = useState(false)
 
   const [clienteEditando, setClienteEditando] = useState(null)
@@ -35,6 +36,7 @@ function Clientes() {
     setTipo('automotivo')
     setVeiculoImovel('')
     setVeiculoModelo('')
+    setObservacao('')
   }
 
   function abrirEdicao(cliente) {
@@ -44,6 +46,7 @@ function Clientes() {
     setTipo(cliente.tipo ?? 'automotivo')
     setVeiculoImovel(cliente.veiculo_imovel ?? '')
     setVeiculoModelo(cliente.veiculo_modelo ?? '')
+    setObservacao(cliente.observacao ?? '')
     setMostrarForm(true)
   }
 
@@ -74,7 +77,7 @@ function Clientes() {
     e.preventDefault()
     if (clienteEditando && !window.confirm('Salvar alterações deste cliente?')) return
     setSalvando(true)
-    const dados = { nome, telefone, tipo, veiculo_imovel: veiculoImovel, veiculo_modelo: veiculoModelo }
+    const dados = { nome, telefone, tipo, veiculo_imovel: veiculoImovel, veiculo_modelo: veiculoModelo, observacao: observacao || null }
     const { error } = clienteEditando
       ? await supabase.from('clientes').update(dados).eq('id', clienteEditando.id)
       : await supabase.from('clientes').insert({ ...dados, status: 'em_dia' })
@@ -183,6 +186,16 @@ function Clientes() {
               />
             </label>
           )}
+          <label style={rotulo}>
+            Observação
+            <textarea
+              rows={3}
+              placeholder="Opcional"
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              style={{ ...campo, resize: 'vertical' }}
+            />
+          </label>
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               type="button"

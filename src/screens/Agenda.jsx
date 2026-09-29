@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import CampoMoeda from '../components/CampoMoeda'
 import CampoTelefone from '../components/CampoTelefone'
-import { formatarTelefone } from '../utils/mascaras'
+import { formatarTelefone, formatarDecimalDigitado, virgulaParaNumero } from '../utils/mascaras'
 
 const ROTULOS_DIA = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
 
@@ -103,6 +103,7 @@ function Agenda({ abrirOS }) {
   const [loading, setLoading] = useState(true)
   const [clientes, setClientes] = useState([])
   const [tipos, setTipos] = useState([])
+  const [servicos, setServicos] = useState([])
 
   const [mostrarForm, setMostrarForm] = useState(false)
   const [clienteSelecionadoId, setClienteSelecionadoId] = useState('')
@@ -120,6 +121,8 @@ function Agenda({ abrirOS }) {
   const [criandoTipo, setCriandoTipo] = useState(false)
   const [servico, setServico] = useState('')
   const [valorCombinado, setValorCombinado] = useState('')
+  const [itens, setItens] = useState([])
+  const [observacao, setObservacao] = useState('')
   const [data, setData] = useState('')
   const [hora, setHora] = useState('')
   const [local, setLocal] = useState('')
@@ -131,6 +134,50 @@ function Agenda({ abrirOS }) {
   const [diaSelecionado, setDiaSelecionado] = useState(() => paraISO(new Date()))
   const [mostrarCalendario, setMostrarCalendario] = useState(false)
   const [mesCalendario, setMesCalendario] = useState(() => new Date())
+
+  const clienteAtual = clientes.find((c) => c.id === clienteSelecionadoId)
+  const categoriaAtual = novoClienteAtivo
+    ? 'automotivo'
+    : clienteAtual
+      ? (clienteAtual.tipo === 'automotivo' ? 'automotivo' : 'arquitetonico')
+      : null
+  const mostrarVeiculoModelo = categoriaAtual !== 'arquitetonico'
+  const servicosFiltrados = categoriaAtual ? servicos.filter((s) => s.categoria === categoriaAtual) : []
+  const totalItens = itens.reduce((soma, item) => soma + (item.valor === '' ? 0 : Number(item.valor)), 0)
+
+  function calcularValorItem(servicoId, quantidadeTexto) {
+    const servicoSelecionado = servicos.find((s) => s.id === servicoId)
+    if (!servicoSelecionado) return ''
+    const qtd = Number(virgulaParaNumero(quantidadeTexto) || 0)
+    return (Number(servicoSelecionado.preco) * qtd).toFixed(2)
+  }
+
+  function adicionarItem() {
+    setItens((atual) => [...atual, { servico_id: '', quantidade: '1', valor: '' }])
+  }
+
+  function mudarItemServico(index, servicoId) {
+    setItens((atual) => atual.map((item, i) => {
+      if (i !== index) return item
+      const servicoSelecionado = servicos.find((s) => s.id === servicoId)
+      const quantidade = servicoSelecionado?.unidade === 'm2' ? (item.quantidade || '1') : '1'
+      return { servico_id: servicoId, quantidade, valor: calcularValorItem(servicoId, quantidade) }
+    }))
+  }
+
+  function mudarItemQuantidade(index, quantidadeTexto) {
+    setItens((atual) => atual.map((item, i) => (i === index
+      ? { ...item, quantidade: quantidadeTexto, valor: calcularValorItem(item.servico_id, quantidadeTexto) }
+      : item)))
+  }
+
+  function mudarItemValor(index, valor) {
+    setItens((atual) => atual.map((item, i) => (i === index ? { ...item, valor } : item)))
+  }
+
+  function removerItem(index) {
+    setItens((atual) => atual.filter((_, i) => i !== index))
+  }
 
   function limparCampos() {
     setClienteSelecionadoId('')
@@ -147,6 +194,8 @@ function Agenda({ abrirOS }) {
     setNovoTipoMarca('')
     setServico('')
     setValorCombinado('')
+    setItens([])
+    setObservacao('')
     setData('')
     setHora('')
     setLocal('')
@@ -168,6 +217,12 @@ function Agenda({ abrirOS }) {
     setNovoTipoMarca('')
     setServico(ag.servico ?? '')
     setValorCombinado(ag.valor != null ? String(ag.valor) : '')
+    setItens((ag.agendamento_itens ?? []).map((item) => ({
+      servico_id: item.servico_id ?? '',
+      quantidade: item.quantidade != null ? String(item.quantidade) : '1',
+      valor: item.valor != null ? String(item.valor) : '',
+    })))
+    setObservacao(ag.observacao ?? '')
     setData(ag.data ? ag.data.slice(0, 10) : '')
     setHora(ag.hora ? ag.hora.slice(0, 5) : '')
     setLocal(ag.local ?? '')
@@ -253,7 +308,7 @@ function Agenda({ abrirOS }) {
   async function carregarAgendamentos() {
     const { data: dados, error } = await supabase
       .from('agendamentos')
-      .select('*, clientes(nome), tipos_pelicula(nome), ordens_servico(id, status, valor_pago)')
+      .select('*, clientes(nome), tipos_pelicula(nome), ordens_servico(id, status, valor_pago), agendamento_itens(*, servicos(nome, unidade))')
       .order('data', { ascending: true })
       .order('hora', { ascending: true })
     if (error) {
@@ -267,12 +322,25 @@ function Agenda({ abrirOS }) {
   async function carregarClientes() {
     const { data: dados, error } = await supabase
       .from('clientes')
-      .select('id, nome, telefone, veiculo_modelo')
+      .select('id, nome, telefone, tipo, veiculo_modelo, observacao')
       .order('nome', { ascending: true })
     if (error) {
       console.error('Erro ao buscar clientes:', error)
     } else {
       setClientes(dados ?? [])
+    }
+  }
+
+  async function carregarServicos() {
+    const { data: dados, error } = await supabase
+      .from('servicos')
+      .select('*')
+      .eq('ativo', true)
+      .order('nome', { ascending: true })
+    if (error) {
+      console.error('Erro ao buscar serviços:', error)
+    } else {
+      setServicos(dados ?? [])
     }
   }
 
@@ -293,6 +361,7 @@ function Agenda({ abrirOS }) {
     carregarAgendamentos()
     carregarClientes()
     carregarTipos()
+    carregarServicos()
   }, [])
 
   async function salvar(e) {
@@ -332,21 +401,48 @@ function Agenda({ abrirOS }) {
       cliente_id: clienteIdFinal,
       tipo_id: tipoSelecionado,
       servico,
-      valor: valorCombinado === '' ? null : Number(valorCombinado),
+      valor: itens.length > 0 ? Number(totalItens.toFixed(2)) : (valorCombinado === '' ? null : Number(valorCombinado)),
       data,
       hora,
       local,
-      veiculo_modelo: veiculoModelo,
+      veiculo_modelo: mostrarVeiculoModelo ? veiculoModelo : null,
+      observacao: observacao || null,
     }
-    const { error } = agendamentoEditando
+    let agendamentoId = agendamentoEditando?.id ?? null
+    const resultado = agendamentoEditando
       ? await supabase.from('agendamentos').update(dados).eq('id', agendamentoEditando.id)
-      : await supabase.from('agendamentos').insert(dados)
-    setSalvando(false)
+      : await supabase.from('agendamentos').insert(dados).select('id').single()
+    const error = resultado.error
+    if (!agendamentoEditando && resultado.data) {
+      agendamentoId = resultado.data.id
+    }
     if (error) {
+      setSalvando(false)
       console.error('Erro ao salvar agendamento:', error)
       alert('Não foi possível salvar o agendamento. Tente novamente.')
       return
     }
+
+    if (agendamentoId) {
+      await supabase.from('agendamento_itens').delete().eq('agendamento_id', agendamentoId)
+      const itensValidos = itens.filter((item) => item.servico_id)
+      if (itensValidos.length > 0) {
+        const { error: erroItens } = await supabase.from('agendamento_itens').insert(
+          itensValidos.map((item) => ({
+            agendamento_id: agendamentoId,
+            servico_id: item.servico_id,
+            quantidade: item.quantidade === '' ? 1 : Number(virgulaParaNumero(item.quantidade)),
+            valor: item.valor === '' ? 0 : Number(item.valor),
+          }))
+        )
+        if (erroItens) {
+          console.error('Erro ao salvar itens do agendamento:', erroItens)
+          alert('Agendamento salvo, mas não foi possível salvar os itens. Tente novamente.')
+        }
+      }
+    }
+
+    setSalvando(false)
     fecharForm()
     await carregarAgendamentos()
     if (novoClienteAtivo) await carregarClientes()
@@ -492,16 +588,18 @@ function Agenda({ abrirOS }) {
               </div>
             )}
           </div>
-          <label style={rotulo}>
-            Modelo do veículo
-            <input
-              type="text"
-              placeholder="Ex: Corolla 2020"
-              value={veiculoModelo}
-              onChange={(e) => setVeiculoModelo(e.target.value)}
-              style={campo}
-            />
-          </label>
+          {mostrarVeiculoModelo && (
+            <label style={rotulo}>
+              Modelo do veículo
+              <input
+                type="text"
+                placeholder="Ex: Corolla 2020"
+                value={veiculoModelo}
+                onChange={(e) => setVeiculoModelo(e.target.value)}
+                style={campo}
+              />
+            </label>
+          )}
           <div style={rotulo}>
             <span>Tipo de película</span>
             <select
@@ -614,9 +712,81 @@ function Agenda({ abrirOS }) {
               <option value="Comercial" />
             </datalist>
           </label>
+          <div style={rotulo}>
+            <span>Itens</span>
+            {categoriaAtual == null && (
+              <div style={{ fontSize: 13, color: '#8A8A8A' }}>Selecione um cliente para adicionar itens.</div>
+            )}
+            {itens.map((item, index) => {
+              const servicoItem = servicos.find((s) => s.id === item.servico_id)
+              return (
+                <div
+                  key={index}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12, border: '1px solid #E4E7EC', borderRadius: 10 }}
+                >
+                  <select
+                    required
+                    value={item.servico_id}
+                    onChange={(e) => mudarItemServico(index, e.target.value)}
+                    style={campo}
+                  >
+                    <option value="" disabled>Selecione um serviço</option>
+                    {servicosFiltrados.map((s) => (
+                      <option key={s.id} value={s.id}>{s.nome}</option>
+                    ))}
+                  </select>
+                  {servicoItem?.unidade === 'm2' && (
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Quantidade (m²)"
+                      value={item.quantidade}
+                      onChange={(e) => mudarItemQuantidade(index, formatarDecimalDigitado(e.target.value))}
+                      style={campo}
+                    />
+                  )}
+                  <CampoMoeda value={item.valor} onChange={(valor) => mudarItemValor(index, valor)} style={campo} />
+                  <button
+                    type="button"
+                    onClick={() => removerItem(index)}
+                    style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: '#A6332C', fontSize: 13, padding: 0, cursor: 'pointer' }}
+                  >
+                    Remover
+                  </button>
+                </div>
+              )
+            })}
+            <button
+              type="button"
+              onClick={adicionarItem}
+              disabled={categoriaAtual == null}
+              style={{
+                padding: 10,
+                borderRadius: 10,
+                border: '1px dashed #D0D5DD',
+                background: '#FFFFFF',
+                color: '#14304D',
+                fontWeight: 600,
+                cursor: categoriaAtual == null ? 'not-allowed' : 'pointer',
+                opacity: categoriaAtual == null ? 0.6 : 1,
+              }}
+            >
+              + Adicionar item
+            </button>
+            {itens.length > 0 && (
+              <div style={{ fontSize: 13, fontWeight: 700, textAlign: 'right' }}>
+                Total: {formatarValor(totalItens)}
+              </div>
+            )}
+          </div>
           <label style={rotulo}>
             Valor combinado
-            <CampoMoeda value={valorCombinado} onChange={setValorCombinado} style={campo} />
+            <CampoMoeda
+              value={itens.length > 0 ? totalItens.toFixed(2) : valorCombinado}
+              onChange={setValorCombinado}
+              disabled={itens.length > 0}
+              style={campo}
+            />
           </label>
           <label style={rotulo}>
             Data
@@ -629,6 +799,16 @@ function Agenda({ abrirOS }) {
           <label style={rotulo}>
             Local
             <input type="text" value={local} onChange={(e) => setLocal(e.target.value)} style={campo} />
+          </label>
+          <label style={rotulo}>
+            Observação
+            <textarea
+              rows={3}
+              placeholder="Opcional"
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              style={{ ...campo, resize: 'vertical' }}
+            />
           </label>
           <div style={{ display: 'flex', gap: 10 }}>
             <button

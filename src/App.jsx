@@ -9,6 +9,7 @@ import Financeiro from './screens/Financeiro'
 import Agenda from './screens/Agenda'
 import OrdensServico from './screens/OrdensServico'
 import TiposPelicula from './screens/TiposPelicula'
+import Servicos from './screens/Servicos'
 import './App.css'
 
 const SCREENS = {
@@ -19,6 +20,7 @@ const SCREENS = {
   agenda: Agenda,
   os: OrdensServico,
   tipos: TiposPelicula,
+  servicos: Servicos,
 }
 
 function App() {
