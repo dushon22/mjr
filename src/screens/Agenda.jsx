@@ -120,6 +120,7 @@ function Agenda({ abrirOS }) {
   const [novoTipoMarca, setNovoTipoMarca] = useState('')
   const [criandoTipo, setCriandoTipo] = useState(false)
   const [servico, setServico] = useState('')
+  const [categoriaServico, setCategoriaServico] = useState('automotivo')
   const [valorCombinado, setValorCombinado] = useState('')
   const [itens, setItens] = useState([])
   const [observacao, setObservacao] = useState('')
@@ -135,15 +136,14 @@ function Agenda({ abrirOS }) {
   const [mostrarCalendario, setMostrarCalendario] = useState(false)
   const [mesCalendario, setMesCalendario] = useState(() => new Date())
 
-  const clienteAtual = clientes.find((c) => c.id === clienteSelecionadoId)
-  const categoriaAtual = novoClienteAtivo
-    ? 'automotivo'
-    : clienteAtual
-      ? (clienteAtual.tipo === 'automotivo' ? 'automotivo' : 'arquitetonico')
-      : null
-  const mostrarVeiculoModelo = categoriaAtual !== 'arquitetonico'
-  const servicosFiltrados = categoriaAtual ? servicos.filter((s) => s.categoria === categoriaAtual) : []
+  const mostrarVeiculoModelo = categoriaServico !== 'arquitetonico'
+  const servicosFiltrados = servicos.filter((s) => s.categoria === categoriaServico)
   const totalItens = itens.reduce((soma, item) => soma + (item.valor === '' ? 0 : Number(item.valor)), 0)
+
+  function mudarCategoriaServico(valor) {
+    setCategoriaServico(valor)
+    setItens([])
+  }
 
   function calcularValorItem(servicoId, quantidadeTexto) {
     const servicoSelecionado = servicos.find((s) => s.id === servicoId)
@@ -193,6 +193,7 @@ function Agenda({ abrirOS }) {
     setNovoTipoColoracao('')
     setNovoTipoMarca('')
     setServico('')
+    setCategoriaServico('automotivo')
     setValorCombinado('')
     setItens([])
     setObservacao('')
@@ -216,6 +217,7 @@ function Agenda({ abrirOS }) {
     setNovoTipoColoracao('')
     setNovoTipoMarca('')
     setServico(ag.servico ?? '')
+    setCategoriaServico(ag.categoria ?? 'automotivo')
     setValorCombinado(ag.valor != null ? String(ag.valor) : '')
     setItens((ag.agendamento_itens ?? []).map((item) => ({
       servico_id: item.servico_id ?? '',
@@ -405,6 +407,7 @@ function Agenda({ abrirOS }) {
     const dados = {
       cliente_id: clienteIdFinal,
       tipo_id: tipoSelecionado,
+      categoria: categoriaServico,
       servico: servicoFinal,
       valor: itens.length > 0 ? Number(totalItens.toFixed(2)) : (valorCombinado === '' ? null : Number(valorCombinado)),
       data,
@@ -503,6 +506,18 @@ function Agenda({ abrirOS }) {
             gap: 16,
           }}
         >
+          <label style={rotulo}>
+            Tipo de serviço
+            <select
+              required
+              value={categoriaServico}
+              onChange={(e) => mudarCategoriaServico(e.target.value)}
+              style={campo}
+            >
+              <option value="automotivo">Automotivo</option>
+              <option value="arquitetonico">Arquitetônico</option>
+            </select>
+          </label>
           <div style={rotulo}>
             <span>Cliente</span>
             {!novoClienteAtivo && (
@@ -700,9 +715,6 @@ function Agenda({ abrirOS }) {
           </div>
           <div style={rotulo}>
             <span>Itens</span>
-            {categoriaAtual == null && (
-              <div style={{ fontSize: 13, color: '#8A8A8A' }}>Selecione um cliente para adicionar itens.</div>
-            )}
             {itens.map((item, index) => {
               const servicoItem = servicos.find((s) => s.id === item.servico_id)
               return (
@@ -745,7 +757,6 @@ function Agenda({ abrirOS }) {
             <button
               type="button"
               onClick={adicionarItem}
-              disabled={categoriaAtual == null}
               style={{
                 padding: 10,
                 borderRadius: 10,
@@ -753,8 +764,7 @@ function Agenda({ abrirOS }) {
                 background: '#FFFFFF',
                 color: '#14304D',
                 fontWeight: 600,
-                cursor: categoriaAtual == null ? 'not-allowed' : 'pointer',
-                opacity: categoriaAtual == null ? 0.6 : 1,
+                cursor: 'pointer',
               }}
             >
               + Adicionar item

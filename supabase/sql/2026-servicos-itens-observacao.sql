@@ -19,6 +19,7 @@ create table if not exists agendamento_itens (
 
 alter table clientes add column if not exists observacao text;
 alter table agendamentos add column if not exists observacao text;
+alter table agendamentos add column if not exists categoria text;
 
 -- Ajuste as policies de RLS abaixo para espelhar exatamente o que já existe
 -- em `tipos_pelicula`/`agendamentos` no seu projeto (aqui assumo "usuário
