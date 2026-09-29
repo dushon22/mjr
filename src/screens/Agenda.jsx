@@ -397,10 +397,15 @@ function Agenda({ abrirOS }) {
       clienteIdFinal = clienteCriado.id
     }
 
+    const nomesItens = itens
+      .map((item) => servicos.find((s) => s.id === item.servico_id)?.nome)
+      .filter(Boolean)
+    const servicoFinal = nomesItens.length > 0 ? nomesItens.join(' + ') : servico
+
     const dados = {
       cliente_id: clienteIdFinal,
       tipo_id: tipoSelecionado,
-      servico,
+      servico: servicoFinal,
       valor: itens.length > 0 ? Number(totalItens.toFixed(2)) : (valorCombinado === '' ? null : Number(valorCombinado)),
       data,
       hora,
@@ -693,25 +698,6 @@ function Agenda({ abrirOS }) {
               </div>
             )}
           </div>
-          <label style={rotulo}>
-            Serviço
-            <input
-              type="text"
-              required
-              list="servicos-sugeridos"
-              value={servico}
-              onChange={(e) => setServico(e.target.value)}
-              style={campo}
-            />
-            <datalist id="servicos-sugeridos">
-              <option value="Carro completo" />
-              <option value="Para-brisa" />
-              <option value="Vidros laterais" />
-              <option value="Traseiro" />
-              <option value="Residencial" />
-              <option value="Comercial" />
-            </datalist>
-          </label>
           <div style={rotulo}>
             <span>Itens</span>
             {categoriaAtual == null && (
