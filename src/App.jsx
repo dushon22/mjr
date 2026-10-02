@@ -79,21 +79,24 @@ function App() {
 
   return (
     <>
-      {visitados.map((tab) => {
-        const Screen = SCREENS[tab]
-        return (
-          <div key={tab} style={{ display: tab === activeTab ? 'contents' : 'none' }}>
-            <Screen
-              setActiveTab={setActiveTab}
-              abrirOS={abrirOS}
-              osAlvo={osAlvo}
-              limparOsAlvo={() => setOsAlvo(null)}
-              dataVersion={dataVersion}
-              ativa={tab === activeTab}
-            />
-          </div>
-        )
-      })}
+      {/* Container de rolagem do app; barra inferior e "+" ficam fora dele (portal no body). */}
+      <div className="app-scroll">
+        {visitados.map((tab) => {
+          const Screen = SCREENS[tab]
+          return (
+            <div key={tab} style={{ display: tab === activeTab ? 'contents' : 'none' }}>
+              <Screen
+                setActiveTab={setActiveTab}
+                abrirOS={abrirOS}
+                osAlvo={osAlvo}
+                limparOsAlvo={() => setOsAlvo(null)}
+                dataVersion={dataVersion}
+                ativa={tab === activeTab}
+              />
+            </div>
+          )
+        })}
+      </div>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </>
   )
