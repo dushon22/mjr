@@ -110,7 +110,7 @@ function Inicio({ setActiveTab, dataVersion, ativa }) {
   }
 
   return (
-    <div style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)' }}>
+    <div style={{ paddingBottom: 'calc(var(--nav-bottom) + 100px)' }}>
       <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
           <span style={{ color: '#FFFFFF' }}>MJR</span>{' '}

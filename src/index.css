@@ -15,6 +15,9 @@
   --heading: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
+  /* Distância da barra inferior mobile até a borda da tela; base do "+" e do espaço final das telas. */
+  --nav-bottom: max(6px, calc(env(safe-area-inset-bottom) - 8px));
+
   font: 16px/1.5 var(--sans);
   font-weight: 400;
   letter-spacing: normal;
@@ -221,7 +224,7 @@ code {
     right: 12px;
     width: auto;
     height: 64px;
-    bottom: calc(env(safe-area-inset-bottom) + 10px);
+    bottom: var(--nav-bottom);
     border-radius: 28px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: #1f2129;
@@ -274,7 +277,7 @@ code {
 .fab {
   position: fixed;
   right: 16px;
-  bottom: calc(env(safe-area-inset-bottom) + 90px);
+  bottom: calc(var(--nav-bottom) + 80px);
   width: 56px;
   height: 56px;
   border-radius: 50%;

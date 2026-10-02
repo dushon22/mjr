@@ -586,7 +586,7 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
         <form
           onSubmit={salvar}
           style={{
-            padding: '20px 20px calc(env(safe-area-inset-bottom) + 100px) 20px',
+            padding: '20px 20px calc(var(--nav-bottom) + 100px) 20px',
             display: 'flex',
             flexDirection: 'column',
             gap: 16,
