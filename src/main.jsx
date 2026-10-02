@@ -4,6 +4,7 @@ import '@fontsource-variable/inter'
 import '@fontsource-variable/plus-jakarta-sans'
 import './index.css'
 import App from './App.jsx'
+import './debugViewport.js' // DEBUG TEMPORÁRIO
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
