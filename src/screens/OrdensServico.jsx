@@ -73,7 +73,7 @@ function ItensEObservacao({ ag }) {
   )
 }
 
-function OrdensServico({ osAlvo, limparOsAlvo }) {
+function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
   const [ordens, setOrdens] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -105,8 +105,8 @@ function OrdensServico({ osAlvo, limparOsAlvo }) {
   }
 
   useEffect(() => {
-    carregarOrdens()
-  }, [])
+    if (ativa) carregarOrdens()
+  }, [dataVersion, ativa])
 
   useEffect(() => {
     if (!osAlvo || ordens.length === 0) return

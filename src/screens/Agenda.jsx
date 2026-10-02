@@ -6,6 +6,24 @@ import { formatarTelefone, formatarDecimalDigitado, virgulaParaNumero } from '..
 
 const ROTULOS_DIA = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
 
+const ORDEM_SERVICOS = ['para-brisa', 'vidros laterais', 'vidro traseiro', 'todos os vidros exceto para-brisa', 'completo']
+
+function normalizarNome(nome) {
+  return (nome ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+// Serviços conhecidos na ordem de ORDEM_SERVICOS; os demais depois, em ordem alfabética.
+function compararServicos(a, b) {
+  const ia = ORDEM_SERVICOS.indexOf(normalizarNome(a.nome))
+  const ib = ORDEM_SERVICOS.indexOf(normalizarNome(b.nome))
+  if (ia !== -1 || ib !== -1) {
+    if (ia === -1) return 1
+    if (ib === -1) return -1
+    return ia - ib
+  }
+  return a.nome.localeCompare(b.nome, 'pt-BR')
+}
+
 function paraISO(d) {
   const mes = String(d.getMonth() + 1).padStart(2, '0')
   const dia = String(d.getDate()).padStart(2, '0')
@@ -98,7 +116,7 @@ function calcularStatusAgendamento(ag) {
   }
 }
 
-function Agenda({ abrirOS }) {
+function Agenda({ abrirOS, dataVersion, ativa }) {
   const [agendamentos, setAgendamentos] = useState([])
   const [loading, setLoading] = useState(true)
   const [clientes, setClientes] = useState([])
@@ -123,6 +141,11 @@ function Agenda({ abrirOS }) {
   const [categoriaServico, setCategoriaServico] = useState('automotivo')
   const [valorCombinado, setValorCombinado] = useState('')
   const [itens, setItens] = useState([])
+  const [novoServicoIndex, setNovoServicoIndex] = useState(null)
+  const [novoServicoNome, setNovoServicoNome] = useState('')
+  const [novoServicoUnidade, setNovoServicoUnidade] = useState('un')
+  const [novoServicoPreco, setNovoServicoPreco] = useState('')
+  const [criandoServico, setCriandoServico] = useState(false)
   const [observacao, setObservacao] = useState('')
   const [data, setData] = useState('')
   const [hora, setHora] = useState('')
@@ -137,12 +160,71 @@ function Agenda({ abrirOS }) {
   const [mesCalendario, setMesCalendario] = useState(() => new Date())
 
   const mostrarVeiculoModelo = categoriaServico !== 'arquitetonico'
-  const servicosFiltrados = servicos.filter((s) => s.categoria === categoriaServico)
+  const servicosFiltrados = servicos.filter((s) => s.categoria === categoriaServico).sort(compararServicos)
   const totalItens = itens.reduce((soma, item) => soma + (item.valor === '' ? 0 : Number(item.valor)), 0)
 
   function mudarCategoriaServico(valor) {
     setCategoriaServico(valor)
     setItens([])
+    cancelarNovoServico()
+  }
+
+  function abrirCadastroServico(index) {
+    setNovoServicoIndex(index)
+    setNovoServicoNome('')
+    setNovoServicoUnidade('un')
+    setNovoServicoPreco('')
+  }
+
+  function cancelarNovoServico() {
+    setNovoServicoIndex(null)
+    setNovoServicoNome('')
+    setNovoServicoUnidade('un')
+    setNovoServicoPreco('')
+  }
+
+  async function salvarNovoServico() {
+    const nomeNovo = novoServicoNome.trim()
+    if (!nomeNovo) {
+      alert('Informe o nome do serviço.')
+      return
+    }
+    const index = novoServicoIndex
+    const existente = servicos.find(
+      (s) => s.categoria === categoriaServico && normalizarNome(s.nome) === normalizarNome(nomeNovo),
+    )
+    if (existente) {
+      mudarItemServico(index, existente.id)
+      cancelarNovoServico()
+      return
+    }
+    setCriandoServico(true)
+    const { data: servicoCriado, error } = await supabase
+      .from('servicos')
+      .insert({
+        nome: nomeNovo,
+        categoria: categoriaServico,
+        unidade: novoServicoUnidade,
+        preco: novoServicoPreco === '' ? 0 : Number(novoServicoPreco),
+        ativo: true,
+      })
+      .select('*')
+      .single()
+    setCriandoServico(false)
+    if (error) {
+      console.error('Erro ao cadastrar serviço:', error)
+      alert('Não foi possível cadastrar o serviço. Tente novamente.')
+      return
+    }
+    await carregarServicos()
+    setItens((atual) => atual.map((item, i) => {
+      if (i !== index) return item
+      const quantidade = servicoCriado.unidade === 'm2' ? (item.quantidade || '1') : '1'
+      const qtd = Number(virgulaParaNumero(quantidade) || 0)
+      const valor = novoServicoPreco === '' ? '' : (Number(servicoCriado.preco) * qtd).toFixed(2)
+      return { servico_id: servicoCriado.id, quantidade, valor }
+    }))
+    cancelarNovoServico()
   }
 
   function calcularValorItem(servicoId, quantidadeTexto) {
@@ -177,9 +259,11 @@ function Agenda({ abrirOS }) {
 
   function removerItem(index) {
     setItens((atual) => atual.filter((_, i) => i !== index))
+    cancelarNovoServico()
   }
 
   function limparCampos() {
+    cancelarNovoServico()
     setClienteSelecionadoId('')
     setClienteBusca('')
     setClienteDropdownAberto(false)
@@ -360,11 +444,12 @@ function Agenda({ abrirOS }) {
   }
 
   useEffect(() => {
+    if (!ativa) return
     carregarAgendamentos()
     carregarClientes()
     carregarTipos()
     carregarServicos()
-  }, [])
+  }, [dataVersion, ativa])
 
   async function salvar(e) {
     e.preventDefault()
@@ -725,14 +810,69 @@ function Agenda({ abrirOS }) {
                   <select
                     required
                     value={item.servico_id}
-                    onChange={(e) => mudarItemServico(index, e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value === '__novo__') {
+                        abrirCadastroServico(index)
+                        return
+                      }
+                      mudarItemServico(index, e.target.value)
+                    }}
                     style={campo}
                   >
                     <option value="" disabled>Selecione um serviço</option>
                     {servicosFiltrados.map((s) => (
                       <option key={s.id} value={s.id}>{s.nome}</option>
                     ))}
+                    <option value="__novo__">+ Novo serviço</option>
                   </select>
+                  {novoServicoIndex === index && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #D0D5DD', borderRadius: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo serviço</span>
+                        <button
+                          type="button"
+                          onClick={cancelarNovoServico}
+                          style={{ background: 'none', border: 'none', color: '#8A8A8A', cursor: 'pointer', fontSize: 13 }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Nome"
+                        value={novoServicoNome}
+                        onChange={(e) => setNovoServicoNome(e.target.value)}
+                        style={campo}
+                      />
+                      <select value={novoServicoUnidade} onChange={(e) => setNovoServicoUnidade(e.target.value)} style={campo}>
+                        <option value="un">un</option>
+                        <option value="m2">m²</option>
+                      </select>
+                      <CampoMoeda
+                        value={novoServicoPreco}
+                        onChange={setNovoServicoPreco}
+                        placeholder={novoServicoUnidade === 'm2' ? 'Preço por m² (opcional)' : 'Preço (opcional)'}
+                        style={campo}
+                      />
+                      <button
+                        type="button"
+                        onClick={salvarNovoServico}
+                        disabled={criandoServico}
+                        style={{
+                          padding: 10,
+                          borderRadius: 10,
+                          border: 'none',
+                          background: '#14304D',
+                          color: '#FFFFFF',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          opacity: criandoServico ? 0.6 : 1,
+                        }}
+                      >
+                        {criandoServico ? 'Salvando...' : 'Adicionar serviço'}
+                      </button>
+                    </div>
+                  )}
                   {servicoItem?.unidade === 'm2' && (
                     <input
                       type="text"

@@ -16,7 +16,7 @@ const UNIDADES = [
   { value: 'm2', label: 'm²' },
 ]
 
-function Servicos({ setActiveTab }) {
+function Servicos({ setActiveTab, dataVersion, ativa }) {
   const [servicos, setServicos] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -65,8 +65,8 @@ function Servicos({ setActiveTab }) {
   }
 
   useEffect(() => {
-    carregarServicos()
-  }, [])
+    if (ativa) carregarServicos()
+  }, [dataVersion, ativa])
 
   async function salvar(e) {
     e.preventDefault()

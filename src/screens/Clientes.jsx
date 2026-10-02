@@ -15,7 +15,7 @@ function iniciais(nome) {
     .join('')
 }
 
-function Clientes() {
+function Clientes({ dataVersion, ativa }) {
   const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -70,8 +70,8 @@ function Clientes() {
   }
 
   useEffect(() => {
-    carregarClientes()
-  }, [])
+    if (ativa) carregarClientes()
+  }, [dataVersion, ativa])
 
   async function salvar(e) {
     e.preventDefault()

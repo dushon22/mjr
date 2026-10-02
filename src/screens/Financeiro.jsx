@@ -72,7 +72,7 @@ function estiloLinha(conta, hojeISO) {
   return { cor: '#8A8A8A', texto: `Vence em ${formatarData(conta.vencimento)}` }
 }
 
-function Financeiro() {
+function Financeiro({ dataVersion, ativa }) {
   const [contas, setContas] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -133,8 +133,8 @@ function Financeiro() {
   }
 
   useEffect(() => {
-    carregarContas()
-  }, [])
+    if (ativa) carregarContas()
+  }, [dataVersion, ativa])
 
   async function salvar(e) {
     e.preventDefault()

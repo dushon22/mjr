@@ -1,7 +1,30 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import CampoSelectComNovo from '../components/CampoSelectComNovo'
 
-function TiposPelicula({ setActiveTab }) {
+const MATERIAIS_PADRAO = ['Nano Ceramic', 'PAP', 'Fumê', 'Espelhado', 'Segurança']
+const COLORACOES_PADRAO = ['G5', 'G20', 'G35', 'G50', 'G70']
+
+// Padrões + valores salvos, sem vazios e sem duplicar (ignorando maiúsculas/minúsculas).
+function juntarOpcoes(padroes, salvos) {
+  const opcoes = []
+  for (const v of [...padroes, ...salvos.map((s) => (s ?? '').trim()).filter(Boolean)]) {
+    if (!opcoes.some((o) => o.toLowerCase() === v.toLowerCase())) opcoes.push(v)
+  }
+  return opcoes
+}
+
+// Ordena pelo número (G5, G20, G35...); valores sem número vão para o fim, em ordem alfabética.
+function compararColoracao(a, b) {
+  const na = a.match(/\d+/)
+  const nb = b.match(/\d+/)
+  if (na && nb && Number(na[0]) !== Number(nb[0])) return Number(na[0]) - Number(nb[0])
+  if (na && !nb) return -1
+  if (!na && nb) return 1
+  return a.localeCompare(b, 'pt-BR')
+}
+
+function TiposPelicula({ setActiveTab, dataVersion, ativa }) {
   const [tipos, setTipos] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -47,8 +70,8 @@ function TiposPelicula({ setActiveTab }) {
   }
 
   useEffect(() => {
-    carregarTipos()
-  }, [])
+    if (ativa) carregarTipos()
+  }, [dataVersion, ativa])
 
   async function salvar(e) {
     e.preventDefault()
@@ -100,6 +123,10 @@ function TiposPelicula({ setActiveTab }) {
       background: '#FFFFFF',
     }
     const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
+    const opcoesMaterial = juntarOpcoes(MATERIAIS_PADRAO, tipos.map((t) => t.material))
+    opcoesMaterial.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    const opcoesColoracao = juntarOpcoes(COLORACOES_PADRAO, tipos.map((t) => t.coloracao))
+    opcoesColoracao.sort(compararColoracao)
     return (
       <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
         <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
@@ -116,41 +143,27 @@ function TiposPelicula({ setActiveTab }) {
             gap: 16,
           }}
         >
-          <label style={rotulo}>
-            Material
-            <input
-              type="text"
-              required
-              list="materiais-sugeridos-tipos"
-              value={material}
-              onChange={(e) => setMaterial(e.target.value)}
-              style={campo}
-            />
-            <datalist id="materiais-sugeridos-tipos">
-              <option value="Nano Ceramic" />
-              <option value="PAP" />
-              <option value="Fumê" />
-              <option value="Espelhado" />
-              <option value="Segurança" />
-            </datalist>
-          </label>
-          <label style={rotulo}>
-            Coloração
-            <input
-              type="text"
-              list="coloracoes-sugeridas-tipos"
-              value={coloracao}
-              onChange={(e) => setColoracao(e.target.value)}
-              style={campo}
-            />
-            <datalist id="coloracoes-sugeridas-tipos">
-              <option value="G5" />
-              <option value="G20" />
-              <option value="G35" />
-              <option value="G50" />
-              <option value="G70" />
-            </datalist>
-          </label>
+          <CampoSelectComNovo
+            label="Material"
+            required
+            value={material}
+            onChange={setMaterial}
+            opcoes={opcoesMaterial}
+            textoNovo="+ Novo material"
+            placeholderNovo="Nome do novo material"
+            style={campo}
+            labelStyle={rotulo}
+          />
+          <CampoSelectComNovo
+            label="Coloração"
+            value={coloracao}
+            onChange={setColoracao}
+            opcoes={opcoesColoracao}
+            textoNovo="+ Nova coloração"
+            placeholderNovo="Nome da nova coloração"
+            style={campo}
+            labelStyle={rotulo}
+          />
           <label style={rotulo}>
             Marca
             <input type="text" value={marca} onChange={(e) => setMarca(e.target.value)} style={campo} />

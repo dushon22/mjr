@@ -69,6 +69,32 @@ textarea {
   -webkit-text-fill-color: #1a1a1a;
 }
 
+input,
+select,
+textarea {
+  box-sizing: border-box;
+}
+
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: block;
+  text-align: left;
+}
+
+input::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+label {
+  text-align: left;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: #8a8f98;

@@ -5,7 +5,7 @@ import { formatarDecimalDigitado, virgulaParaNumero } from '../utils/mascaras'
 
 const LIMITE_ALERTA_M = 5
 
-function Estoque({ setActiveTab }) {
+function Estoque({ setActiveTab, dataVersion, ativa }) {
   const [itens, setItens] = useState([])
   const [tipos, setTipos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -131,9 +131,10 @@ function Estoque({ setActiveTab }) {
   }
 
   useEffect(() => {
+    if (!ativa) return
     carregarItens()
     carregarTipos()
-  }, [])
+  }, [dataVersion, ativa])
 
   async function salvar(e) {
     e.preventDefault()

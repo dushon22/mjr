@@ -35,33 +35,35 @@ function estaPendente(ag) {
 
 const LIMITE_ALERTA_M = 5
 
-function Inicio({ setActiveTab }) {
+function Inicio({ setActiveTab, dataVersion, ativa }) {
   const [clientes, setClientes] = useState([])
   const [itensEstoque, setItensEstoque] = useState([])
   const [contas, setContas] = useState([])
   const [agendamentos, setAgendamentos] = useState([])
   const [loading, setLoading] = useState(true)
 
+  async function carregar() {
+    const [cli, est, fin, ag] = await Promise.all([
+      supabase.from('clientes').select('*'),
+      supabase.from('estoque').select('*, tipos_pelicula(nome)'),
+      supabase.from('financeiro').select('*'),
+      supabase
+        .from('agendamentos')
+        .select('*, clientes(nome), ordens_servico(status)')
+        .order('data')
+        .order('hora'),
+    ])
+    setClientes(cli.data ?? [])
+    setItensEstoque(est.data ?? [])
+    setContas(fin.data ?? [])
+    setAgendamentos(ag.data ?? [])
+    setLoading(false)
+  }
+
+  // Busca ao montar, ao voltar para a aba e quando os dados mudam (sem spinner após a 1ª carga).
   useEffect(() => {
-    async function carregar() {
-      const [cli, est, fin, ag] = await Promise.all([
-        supabase.from('clientes').select('*'),
-        supabase.from('estoque').select('*, tipos_pelicula(nome)'),
-        supabase.from('financeiro').select('*'),
-        supabase
-          .from('agendamentos')
-          .select('*, clientes(nome), ordens_servico(status)')
-          .order('data')
-          .order('hora'),
-      ])
-      setClientes(cli.data ?? [])
-      setItensEstoque(est.data ?? [])
-      setContas(fin.data ?? [])
-      setAgendamentos(ag.data ?? [])
-      setLoading(false)
-    }
-    carregar()
-  }, [])
+    if (ativa) carregar()
+  }, [dataVersion, ativa])
 
   const hoje = hojeISO()
   const aReceber = contas

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from './supabaseClient'
+import { supabase, EVENTO_DADOS_ALTERADOS } from './supabaseClient'
 import Login from './Login'
 import BottomNav from './BottomNav'
 import Inicio from './screens/Inicio'
@@ -28,6 +28,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('inicio')
   const [osAlvo, setOsAlvo] = useState(null) // { id, modo: 'fechar' | 'detalhes' }
   const [visitados, setVisitados] = useState(['inicio'])
+  // Incrementado após escritas no banco e ao voltar ao primeiro plano; a tela ativa busca de novo.
+  const [dataVersion, setDataVersion] = useState(0)
 
   function abrirOS(id, modo) {
     setOsAlvo({ id, modo })
@@ -44,6 +46,25 @@ function App() {
     })
 
     return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    // Agrupa escritas em sequência (ex: agendamento + itens) num único incremento.
+    let timer
+    function avisarMudanca() {
+      clearTimeout(timer)
+      timer = setTimeout(() => setDataVersion((v) => v + 1), 150)
+    }
+    function aoMudarVisibilidade() {
+      if (document.visibilityState === 'visible') avisarMudanca()
+    }
+    window.addEventListener(EVENTO_DADOS_ALTERADOS, avisarMudanca)
+    document.addEventListener('visibilitychange', aoMudarVisibilidade)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener(EVENTO_DADOS_ALTERADOS, avisarMudanca)
+      document.removeEventListener('visibilitychange', aoMudarVisibilidade)
+    }
   }, [])
 
   // Mantém as telas já visitadas montadas (só escondidas), para trocar de aba
@@ -67,6 +88,8 @@ function App() {
               abrirOS={abrirOS}
               osAlvo={osAlvo}
               limparOsAlvo={() => setOsAlvo(null)}
+              dataVersion={dataVersion}
+              ativa={tab === activeTab}
             />
           </div>
         )
