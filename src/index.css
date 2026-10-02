@@ -290,21 +290,6 @@ code {
   box-shadow: 0 4px 12px rgba(20, 48, 77, 0.3);
   z-index: 90;
 }
-
-/* PWA standalone (classe definida em main.jsx): no iOS a viewport inicial vem menor,
-   então a barra e o "+" são posicionados por top a partir de --app-h (altura da tela). */
-@media (max-width: 768px) {
-  html.standalone .bottom-nav {
-    top: calc(var(--app-h) - 64px - var(--nav-bottom));
-    bottom: auto;
-  }
-
-  html.standalone .fab {
-    top: calc(var(--app-h) - 56px - var(--nav-bottom) - 80px);
-    bottom: auto;
-  }
-}
-
 @media (max-width: 768px) {
   input,
   select,
