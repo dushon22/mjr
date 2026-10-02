@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import CampoMoeda from '../components/CampoMoeda'
 import CampoTelefone from '../components/CampoTelefone'
 import { formatarTelefone, formatarDecimalDigitado, virgulaParaNumero } from '../utils/mascaras'
+import BotaoFlutuante from '../components/BotaoFlutuante'
 
 const ROTULOS_DIA = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
 
@@ -576,7 +577,7 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
         )
       : clientes
     return (
-      <div style={{ minHeight: '100vh', background: '#FFFFFF' }}>
+      <div style={{ minHeight: '100dvh', background: '#FFFFFF' }}>
         <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             {agendamentoEditando ? 'Editar agendamento' : 'Novo agendamento'}
@@ -585,7 +586,7 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
         <form
           onSubmit={salvar}
           style={{
-            padding: '20px 20px calc(140px + env(safe-area-inset-bottom, 0px)) 20px',
+            padding: '20px 20px calc(env(safe-area-inset-bottom) + 100px) 20px',
             display: 'flex',
             flexDirection: 'column',
             gap: 16,
@@ -1227,18 +1228,17 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
         )}
       </div>
 
-      <button
-        type="button"
+      <BotaoFlutuante
+        ativa={ativa}
         onClick={() => {
           setAgendamentoEditando(null)
           limparCampos()
           setData(paraISO(new Date()))
           setMostrarForm(true)
         }}
-        className="fab"
       >
         +
-      </button>
+      </BotaoFlutuante>
 
       {mostrarCalendario && (
         <div

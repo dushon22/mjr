@@ -241,7 +241,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
   if (view === 'fechar' && osAtual) {
     const ag = osAtual.agendamentos
     return (
-      <div style={{ minHeight: '100vh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
+      <div style={{ minHeight: '100dvh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
         <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <button
             type="button"
@@ -261,7 +261,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
 
         <div
           style={{
-            padding: '20px 20px calc(140px + env(safe-area-inset-bottom, 0px)) 20px',
+            padding: '20px 20px calc(env(safe-area-inset-bottom) + 100px) 20px',
             display: 'flex',
             flexDirection: 'column',
             gap: 16,
@@ -376,7 +376,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
   if (view === 'detalhes' && osAtual) {
     const ag = osAtual.agendamentos
     return (
-      <div style={{ minHeight: '100vh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
+      <div style={{ minHeight: '100dvh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
         <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <button
             type="button"
@@ -473,7 +473,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
   ]
 
   return (
-    <div style={{ paddingBottom: 'calc(106px + env(safe-area-inset-bottom))' }}>
+    <div style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 100px)' }}>
       <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Ordens de serviço

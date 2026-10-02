@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Home, Users, Package, Wallet, Calendar, ClipboardList } from 'lucide-react'
 
 const TABS = [
@@ -56,7 +57,9 @@ function BottomNav({ activeTab, setActiveTab }) {
     }
   }, [activeTab, larguraIndicador])
 
-  return (
+  // Renderizada direto em document.body, fora dos wrappers das telas, para o
+  // position: fixed ficar sempre relativo à viewport.
+  return createPortal(
     <nav className="bottom-nav" ref={navRef}>
       <span
         className="bottom-nav-indicador"
@@ -83,7 +86,8 @@ function BottomNav({ activeTab, setActiveTab }) {
           </button>
         )
       })}
-    </nav>
+    </nav>,
+    document.body,
   )
 }
 
