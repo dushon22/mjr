@@ -132,8 +132,7 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
   const [novoClienteNome, setNovoClienteNome] = useState('')
   const [novoClienteTelefone, setNovoClienteTelefone] = useState('')
   const [veiculoModelo, setVeiculoModelo] = useState('')
-  const [tipoSelecionado, setTipoSelecionado] = useState('')
-  const [novoTipoAtivo, setNovoTipoAtivo] = useState(false)
+  const [novoTipoIndex, setNovoTipoIndex] = useState(null)
   const [novoTipoMaterial, setNovoTipoMaterial] = useState('')
   const [novoTipoColoracao, setNovoTipoColoracao] = useState('')
   const [novoTipoMarca, setNovoTipoMarca] = useState('')
@@ -223,7 +222,7 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
       const quantidade = servicoCriado.unidade === 'm2' ? (item.quantidade || '1') : '1'
       const qtd = Number(virgulaParaNumero(quantidade) || 0)
       const valor = novoServicoPreco === '' ? '' : (Number(servicoCriado.preco) * qtd).toFixed(2)
-      return { servico_id: servicoCriado.id, quantidade, valor }
+      return { ...item, servico_id: servicoCriado.id, quantidade, valor }
     }))
     cancelarNovoServico()
   }
@@ -236,7 +235,11 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
   }
 
   function adicionarItem() {
-    setItens((atual) => [...atual, { servico_id: '', quantidade: '1', valor: '' }])
+    // Pré-seleciona a película do item anterior (editável).
+    setItens((atual) => [
+      ...atual,
+      { servico_id: '', tipo_pelicula_id: atual[atual.length - 1]?.tipo_pelicula_id ?? '', quantidade: '1', valor: '' },
+    ])
   }
 
   function mudarItemServico(index, servicoId) {
@@ -244,8 +247,12 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
       if (i !== index) return item
       const servicoSelecionado = servicos.find((s) => s.id === servicoId)
       const quantidade = servicoSelecionado?.unidade === 'm2' ? (item.quantidade || '1') : '1'
-      return { servico_id: servicoId, quantidade, valor: calcularValorItem(servicoId, quantidade) }
+      return { ...item, servico_id: servicoId, quantidade, valor: calcularValorItem(servicoId, quantidade) }
     }))
+  }
+
+  function mudarItemTipo(index, tipoId) {
+    setItens((atual) => atual.map((item, i) => (i === index ? { ...item, tipo_pelicula_id: tipoId } : item)))
   }
 
   function mudarItemQuantidade(index, quantidadeTexto) {
@@ -261,10 +268,12 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
   function removerItem(index) {
     setItens((atual) => atual.filter((_, i) => i !== index))
     cancelarNovoServico()
+    cancelarNovoTipo()
   }
 
   function limparCampos() {
     cancelarNovoServico()
+    cancelarNovoTipo()
     setClienteSelecionadoId('')
     setClienteBusca('')
     setClienteDropdownAberto(false)
@@ -272,11 +281,6 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
     setNovoClienteNome('')
     setNovoClienteTelefone('')
     setVeiculoModelo('')
-    setTipoSelecionado('')
-    setNovoTipoAtivo(false)
-    setNovoTipoMaterial('')
-    setNovoTipoColoracao('')
-    setNovoTipoMarca('')
     setServico('')
     setCategoriaServico('automotivo')
     setValorCombinado('')
@@ -296,16 +300,14 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
     setNovoClienteNome('')
     setNovoClienteTelefone('')
     setVeiculoModelo(ag.veiculo_modelo ?? '')
-    setTipoSelecionado(ag.tipo_id ?? '')
-    setNovoTipoAtivo(false)
-    setNovoTipoMaterial('')
-    setNovoTipoColoracao('')
-    setNovoTipoMarca('')
+    cancelarNovoTipo()
     setServico(ag.servico ?? '')
     setCategoriaServico(ag.categoria ?? 'automotivo')
     setValorCombinado(ag.valor != null ? String(ag.valor) : '')
+    // Itens antigos sem película usam a película do agendamento.
     setItens((ag.agendamento_itens ?? []).map((item) => ({
       servico_id: item.servico_id ?? '',
+      tipo_pelicula_id: item.tipo_pelicula_id ?? ag.tipo_id ?? '',
       quantidade: item.quantidade != null ? String(item.quantidade) : '1',
       valor: item.valor != null ? String(item.valor) : '',
     })))
@@ -338,15 +340,15 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
     setClienteSelecionadoId('')
   }
 
-  function abrirCadastroTipo() {
+  function abrirCadastroTipo(index) {
     setNovoTipoMaterial('')
     setNovoTipoColoracao('')
     setNovoTipoMarca('')
-    setNovoTipoAtivo(true)
+    setNovoTipoIndex(index)
   }
 
   function cancelarNovoTipo() {
-    setNovoTipoAtivo(false)
+    setNovoTipoIndex(null)
     setNovoTipoMaterial('')
     setNovoTipoColoracao('')
     setNovoTipoMarca('')
@@ -379,11 +381,8 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
       return
     }
     setTipos((atual) => [...atual, tipoCriado].sort((a, b) => a.nome.localeCompare(b.nome)))
-    setTipoSelecionado(tipoCriado.id)
-    setNovoTipoAtivo(false)
-    setNovoTipoMaterial('')
-    setNovoTipoColoracao('')
-    setNovoTipoMarca('')
+    mudarItemTipo(novoTipoIndex, tipoCriado.id)
+    cancelarNovoTipo()
   }
 
   function fecharForm() {
@@ -454,6 +453,17 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
 
   async function salvar(e) {
     e.preventDefault()
+    const itensValidos = itens.filter((item) => item.servico_id)
+    // A coluna antiga de película do agendamento recebe a do primeiro item (Início e listas usam ela).
+    const tipoIdAgendamento = itensValidos[0]?.tipo_pelicula_id || agendamentoEditando?.tipo_id || null
+    if (itensValidos.some((item) => !item.tipo_pelicula_id)) {
+      alert('Selecione o tipo de película de cada item.')
+      return
+    }
+    if (!tipoIdAgendamento) {
+      alert('Adicione ao menos um item com tipo de película.')
+      return
+    }
     if (agendamentoEditando && !window.confirm('Salvar alterações deste agendamento?')) return
     setSalvando(true)
 
@@ -492,7 +502,7 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
 
     const dados = {
       cliente_id: clienteIdFinal,
-      tipo_id: tipoSelecionado,
+      tipo_id: tipoIdAgendamento,
       categoria: categoriaServico,
       servico: servicoFinal,
       valor: itens.length > 0 ? Number(totalItens.toFixed(2)) : (valorCombinado === '' ? null : Number(valorCombinado)),
@@ -519,12 +529,12 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
 
     if (agendamentoId) {
       await supabase.from('agendamento_itens').delete().eq('agendamento_id', agendamentoId)
-      const itensValidos = itens.filter((item) => item.servico_id)
       if (itensValidos.length > 0) {
         const { error: erroItens } = await supabase.from('agendamento_itens').insert(
           itensValidos.map((item) => ({
             agendamento_id: agendamentoId,
             servico_id: item.servico_id,
+            tipo_pelicula_id: item.tipo_pelicula_id,
             quantidade: item.quantidade === '' ? 1 : Number(virgulaParaNumero(item.quantidade)),
             valor: item.valor === '' ? 0 : Number(item.valor),
           }))
@@ -707,99 +717,6 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
             </label>
           )}
           <div style={rotulo}>
-            <span>Tipo de película</span>
-            <select
-              required
-              value={tipoSelecionado}
-              onChange={(e) => {
-                const valor = e.target.value
-                if (valor === '__novo__') {
-                  abrirCadastroTipo()
-                  return
-                }
-                setTipoSelecionado(valor)
-              }}
-              style={campo}
-            >
-              <option value="" disabled>
-                {tipos.length ? 'Selecione um tipo' : 'Nenhum tipo cadastrado'}
-              </option>
-              {tipos.map((t) => (
-                <option key={t.id} value={t.id}>{t.nome}</option>
-              ))}
-              <option value="__novo__">+ Novo tipo</option>
-            </select>
-            {novoTipoAtivo && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #D0D5DD', borderRadius: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo tipo de película</span>
-                  <button
-                    type="button"
-                    onClick={cancelarNovoTipo}
-                    style={{ background: 'none', border: 'none', color: '#8A8A8A', cursor: 'pointer', fontSize: 13 }}
-                  >
-                    Cancelar
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Material"
-                  required
-                  list="materiais-sugeridos-agenda"
-                  value={novoTipoMaterial}
-                  onChange={(e) => setNovoTipoMaterial(e.target.value)}
-                  style={campo}
-                />
-                <input
-                  type="text"
-                  placeholder="Coloração (opcional)"
-                  list="coloracoes-sugeridas-agenda"
-                  value={novoTipoColoracao}
-                  onChange={(e) => setNovoTipoColoracao(e.target.value)}
-                  style={campo}
-                />
-                <input
-                  type="text"
-                  placeholder="Marca (opcional)"
-                  value={novoTipoMarca}
-                  onChange={(e) => setNovoTipoMarca(e.target.value)}
-                  style={campo}
-                />
-                <datalist id="materiais-sugeridos-agenda">
-                  <option value="Nano Ceramic" />
-                  <option value="PAP" />
-                  <option value="Fumê" />
-                  <option value="Espelhado" />
-                  <option value="Segurança" />
-                </datalist>
-                <datalist id="coloracoes-sugeridas-agenda">
-                  <option value="G5" />
-                  <option value="G20" />
-                  <option value="G35" />
-                  <option value="G50" />
-                  <option value="G70" />
-                </datalist>
-                <button
-                  type="button"
-                  onClick={salvarNovoTipo}
-                  disabled={criandoTipo}
-                  style={{
-                    padding: 10,
-                    borderRadius: 10,
-                    border: 'none',
-                    background: '#14304D',
-                    color: '#FFFFFF',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    opacity: criandoTipo ? 0.6 : 1,
-                  }}
-                >
-                  {criandoTipo ? 'Salvando...' : 'Adicionar tipo'}
-                </button>
-              </div>
-            )}
-          </div>
-          <div style={rotulo}>
             <span>Itens</span>
             {itens.map((item, index) => {
               const servicoItem = servicos.find((s) => s.id === item.servico_id)
@@ -871,6 +788,95 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
                         }}
                       >
                         {criandoServico ? 'Salvando...' : 'Adicionar serviço'}
+                      </button>
+                    </div>
+                  )}
+                  <select
+                    required
+                    value={item.tipo_pelicula_id}
+                    onChange={(e) => {
+                      if (e.target.value === '__novo__') {
+                        abrirCadastroTipo(index)
+                        return
+                      }
+                      mudarItemTipo(index, e.target.value)
+                    }}
+                    style={campo}
+                  >
+                    <option value="" disabled>
+                      {tipos.length ? 'Tipo de película' : 'Nenhum tipo cadastrado'}
+                    </option>
+                    {tipos.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nome}</option>
+                    ))}
+                    <option value="__novo__">+ Novo tipo</option>
+                  </select>
+                  {novoTipoIndex === index && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #D0D5DD', borderRadius: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo tipo de película</span>
+                        <button
+                          type="button"
+                          onClick={cancelarNovoTipo}
+                          style={{ background: 'none', border: 'none', color: '#8A8A8A', cursor: 'pointer', fontSize: 13 }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Material"
+                        required
+                        list="materiais-sugeridos-agenda"
+                        value={novoTipoMaterial}
+                        onChange={(e) => setNovoTipoMaterial(e.target.value)}
+                        style={campo}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Coloração (opcional)"
+                        list="coloracoes-sugeridas-agenda"
+                        value={novoTipoColoracao}
+                        onChange={(e) => setNovoTipoColoracao(e.target.value)}
+                        style={campo}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Marca (opcional)"
+                        value={novoTipoMarca}
+                        onChange={(e) => setNovoTipoMarca(e.target.value)}
+                        style={campo}
+                      />
+                      <datalist id="materiais-sugeridos-agenda">
+                        <option value="Nano Ceramic" />
+                        <option value="PAP" />
+                        <option value="Fumê" />
+                        <option value="Espelhado" />
+                        <option value="Segurança" />
+                      </datalist>
+                      <datalist id="coloracoes-sugeridas-agenda">
+                        <option value="G5" />
+                        <option value="G20" />
+                        <option value="G35" />
+                        <option value="G50" />
+                        <option value="G70" />
+                      </datalist>
+                      <button
+                        type="button"
+                        onClick={salvarNovoTipo}
+                        disabled={criandoTipo}
+                        style={{
+                          padding: 10,
+                          borderRadius: 10,
+                          border: 'none',
+                          background: '#14304D',
+                          color: '#FFFFFF',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          opacity: criandoTipo ? 0.6 : 1,
+                        }}
+                      >
+                        {criandoTipo ? 'Salvando...' : 'Adicionar tipo'}
                       </button>
                     </div>
                   )}

@@ -26,8 +26,43 @@ function formatarValor(valor) {
 
 const FORMAS_PAGAMENTO = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Transferência']
 
-function ItensEObservacao({ ag }) {
+// Itens com a película efetiva: itens antigos sem película usam a do agendamento.
+// Agendamentos antigos sem itens viram um único item com o serviço e a película do agendamento.
+function itensComPelicula(ag) {
   const itens = ag?.agendamento_itens ?? []
+  if (itens.length === 0) {
+    return [{
+      id: 'agendamento',
+      servicoNome: ag?.servico || 'Serviço',
+      tipoId: ag?.tipo_id ?? null,
+      tipoNome: ag?.tipos_pelicula?.nome || 'Tipo removido',
+      valor: ag?.valor,
+    }]
+  }
+  return itens.map((item) => ({
+    id: item.id,
+    servicoNome: (item.servicos?.nome || 'Serviço removido') + (item.servicos?.unidade === 'm2' ? ` (${item.quantidade} m²)` : ''),
+    tipoId: item.tipo_pelicula_id ?? ag?.tipo_id ?? null,
+    tipoNome: (item.tipo_pelicula_id ? item.tipos_pelicula?.nome : ag?.tipos_pelicula?.nome) || 'Tipo removido',
+    valor: item.valor,
+  }))
+}
+
+function CabecalhoOS({ ag }) {
+  const peliculas = [...new Set(itensComPelicula(ag).map((item) => item.tipoNome))].join(' + ')
+  return (
+    <>
+      <p style={{ margin: '4px 0 0', color: '#CFCFCF', fontSize: 13 }}>
+        {ag?.clientes?.nome || 'Sem cliente'}
+        {ag?.veiculo_modelo ? ` · ${ag.veiculo_modelo}` : ''}
+      </p>
+      <p style={{ margin: '2px 0 0', color: '#CFCFCF', fontSize: 13 }}>{peliculas}</p>
+    </>
+  )
+}
+
+function ItensEObservacao({ ag }) {
+  const itens = ag?.agendamento_itens?.length ? itensComPelicula(ag) : []
   const observacaoAgendamento = ag?.observacao
   const observacaoCliente = ag?.clientes?.observacao
   if (itens.length === 0 && !observacaoAgendamento && !observacaoCliente) return null
@@ -44,10 +79,10 @@ function ItensEObservacao({ ag }) {
                 key={item.id}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', border: '1px solid #E4E7EC', borderRadius: 12, padding: 12 }}
               >
-                <span style={{ fontWeight: 600 }}>
-                  {item.servicos?.nome || 'Serviço removido'}
-                  {item.servicos?.unidade === 'm2' ? ` (${item.quantidade} m²)` : ''}
-                </span>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{item.servicoNome}</div>
+                  <div style={{ fontSize: 13, color: '#8A8A8A' }}>{item.tipoNome}</div>
+                </div>
                 <span>{formatarValor(item.valor)}</span>
               </div>
             ))}
@@ -82,7 +117,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
 
   const [rolos, setRolos] = useState([])
   const [carregandoRolos, setCarregandoRolos] = useState(false)
-  const [selecionados, setSelecionados] = useState({}) // { [rolo_id]: metros (string) }
+  const [selecionados, setSelecionados] = useState({}) // { [item_id]: { [rolo_id]: metros (string) } }
   const [valorPago, setValorPago] = useState('')
   const [formaPagamento, setFormaPagamento] = useState('')
   const [fechando, setFechando] = useState(false)
@@ -94,7 +129,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
   async function carregarOrdens() {
     const { data, error } = await supabase
       .from('ordens_servico')
-      .select('*, agendamentos(*, clientes(nome, observacao), tipos_pelicula(nome), agendamento_itens(*, servicos(nome, unidade)))')
+      .select('*, agendamentos(*, clientes(nome, observacao), tipos_pelicula(nome), agendamento_itens(*, servicos(nome, unidade), tipos_pelicula(nome)))')
       .order('created_at', { ascending: false })
     if (error) {
       console.error('Erro ao buscar ordens de serviço:', error)
@@ -129,11 +164,11 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
     setErroFechar('')
     setView('fechar')
     setCarregandoRolos(true)
-    const tipoId = os.agendamentos?.tipo_id
+    const tipoIds = [...new Set(itensComPelicula(os.agendamentos).map((item) => item.tipoId).filter(Boolean))]
     const { data, error } = await supabase
       .from('estoque')
       .select('*')
-      .eq('tipo_id', tipoId)
+      .in('tipo_id', tipoIds)
       .gt('metragem_atual', 0)
       .order('identificacao', { ascending: true })
     if (error) {
@@ -150,7 +185,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
     setCarregandoMovs(true)
     const { data, error } = await supabase
       .from('movimentacoes_estoque')
-      .select('*, estoque(identificacao)')
+      .select('*, estoque(identificacao, tipo_id)')
       .eq('os_id', os.id)
       .order('created_at', { ascending: true })
     if (error) {
@@ -172,32 +207,34 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
     setMovimentacoes([])
   }
 
-  function alternarRolo(roloId) {
+  function alternarRolo(itemId, roloId) {
     setSelecionados((prev) => {
-      const proximo = { ...prev }
-      if (roloId in proximo) {
-        delete proximo[roloId]
+      const doItem = { ...(prev[itemId] ?? {}) }
+      if (roloId in doItem) {
+        delete doItem[roloId]
       } else {
-        proximo[roloId] = ''
+        doItem[roloId] = ''
       }
-      return proximo
+      return { ...prev, [itemId]: doItem }
     })
   }
 
-  function mudarMetros(roloId, valor) {
-    setSelecionados((prev) => ({ ...prev, [roloId]: valor }))
+  function mudarMetros(itemId, roloId, valor) {
+    setSelecionados((prev) => ({ ...prev, [itemId]: { ...(prev[itemId] ?? {}), [roloId]: valor } }))
   }
 
   async function confirmarFechamento() {
     setErroFechar('')
-    const itens = Object.entries(selecionados).map(([rolo_id, metros]) => ({
-      rolo_id,
-      metros: Number(virgulaParaNumero(metros)),
-    }))
-    if (itens.length === 0) {
-      setErroFechar('Selecione ao menos um rolo.')
+    const itensOs = itensComPelicula(osAtual.agendamentos)
+    if (itensOs.some((item) => Object.keys(selecionados[item.id] ?? {}).length === 0)) {
+      setErroFechar('Selecione ao menos um rolo para cada item.')
       return
     }
+    // Baixa normal por rolo: uma entrada para cada rolo selecionado em cada item.
+    const itens = itensOs.flatMap((item) => Object.entries(selecionados[item.id]).map(([rolo_id, metros]) => ({
+      rolo_id,
+      metros: Number(virgulaParaNumero(metros)),
+    })))
     if (itens.some((item) => !item.metros || item.metros <= 0)) {
       setErroFechar('Informe os metros de cada rolo selecionado.')
       return
@@ -253,10 +290,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             Fechar OS
           </h1>
-          <p style={{ margin: '4px 0 0', color: '#CFCFCF', fontSize: 13 }}>
-            {ag?.clientes?.nome || 'Sem cliente'} · {ag?.tipos_pelicula?.nome || 'Tipo removido'}
-            {ag?.veiculo_modelo ? ` · ${ag.veiculo_modelo}` : ''}
-          </p>
+          <CabecalhoOS ag={ag} />
         </header>
 
         <div
@@ -269,55 +303,69 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
         >
           <ItensEObservacao ag={ag} />
 
-          <div style={{ fontSize: 13, color: '#8A8A8A' }}>
-            Selecione um ou mais rolos do tipo <strong>{ag?.tipos_pelicula?.nome}</strong> e informe os metros usados de cada um.
-          </div>
-
-          {carregandoRolos && <div style={{ color: '#8A8A8A' }}>Carregando rolos...</div>}
-          {!carregandoRolos && rolos.length === 0 && (
-            <div style={{ color: '#A6332C' }}>Nenhum rolo com metragem disponível para este tipo de película.</div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {rolos.map((rolo) => {
-              const marcado = rolo.id in selecionados
-              return (
-                <div
-                  key={rolo.id}
-                  style={{
-                    border: `1px solid ${marcado ? '#14304D' : '#E4E7EC'}`,
-                    borderRadius: 12,
-                    padding: 12,
-                    background: marcado ? '#E4EAF1' : '#FFFFFF',
-                  }}
-                >
-                  <div
-                    onClick={() => alternarRolo(rolo.id)}
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{rolo.identificacao}</div>
-                      <div style={{ fontSize: 13, color: '#8A8A8A' }}>
-                        {rolo.largura_m ? `${rolo.largura_m} m largura · ` : ''}
-                        {rolo.metragem_atual} m disponíveis
-                      </div>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+              Rolos utilizados
+            </div>
+            <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 12 }}>
+              Para cada item, selecione um ou mais rolos da película do item e informe os metros usados de cada um.
+            </div>
+            {carregandoRolos && <div style={{ color: '#8A8A8A' }}>Carregando rolos...</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {!carregandoRolos && itensComPelicula(ag).map((item) => {
+                const rolosDoItem = rolos.filter((rolo) => rolo.tipo_id === item.tipoId)
+                const selecionadosDoItem = selecionados[item.id] ?? {}
+                return (
+                  <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ fontWeight: 600 }}>
+                      {item.servicoNome} · <span style={{ color: '#8A8A8A' }}>{item.tipoNome}</span>
                     </div>
-                    <input type="checkbox" checked={marcado} onChange={() => alternarRolo(rolo.id)} style={{ width: 20, height: 20 }} />
+                    {rolosDoItem.length === 0 && (
+                      <div style={{ color: '#A6332C', fontSize: 13 }}>Nenhum rolo com metragem disponível para este tipo de película.</div>
+                    )}
+                    {rolosDoItem.map((rolo) => {
+                      const marcado = rolo.id in selecionadosDoItem
+                      return (
+                        <div
+                          key={rolo.id}
+                          style={{
+                            border: `1px solid ${marcado ? '#14304D' : '#E4E7EC'}`,
+                            borderRadius: 12,
+                            padding: 12,
+                            background: marcado ? '#E4EAF1' : '#FFFFFF',
+                          }}
+                        >
+                          <div
+                            onClick={() => alternarRolo(item.id, rolo.id)}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{rolo.identificacao}</div>
+                              <div style={{ fontSize: 13, color: '#8A8A8A' }}>
+                                {rolo.largura_m ? `${rolo.largura_m} m largura · ` : ''}
+                                {rolo.metragem_atual} m disponíveis
+                              </div>
+                            </div>
+                            <input type="checkbox" checked={marcado} onChange={() => alternarRolo(item.id, rolo.id)} style={{ width: 20, height: 20 }} />
+                          </div>
+                          {marcado && (
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              required
+                              placeholder="Metros usados (ex: 1,52)"
+                              value={selecionadosDoItem[rolo.id]}
+                              onChange={(e) => mudarMetros(item.id, rolo.id, formatarDecimalDigitado(e.target.value))}
+                              style={{ ...campo, marginTop: 10 }}
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                  {marcado && (
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      required
-                      placeholder="Metros usados (ex: 1,52)"
-                      value={selecionados[rolo.id]}
-                      onChange={(e) => mudarMetros(rolo.id, formatarDecimalDigitado(e.target.value))}
-                      style={{ ...campo, marginTop: 10 }}
-                    />
-                  )}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }}>
@@ -375,6 +423,22 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
 
   if (view === 'detalhes' && osAtual) {
     const ag = osAtual.agendamentos
+    // As movimentações não guardam o item; cada rolo aparece junto dos itens da película dele.
+    const itensOs = itensComPelicula(ag)
+    const tiposOs = [...new Set(itensOs.map((item) => item.tipoId))]
+    const gruposDeRolos = tiposOs.map((tipoId) => {
+      const itensDoTipo = itensOs.filter((item) => item.tipoId === tipoId)
+      return {
+        chave: tipoId ?? 'sem-tipo',
+        titulo: itensDoTipo.map((item) => item.servicoNome).join(' + '),
+        subtitulo: itensDoTipo[0].tipoNome,
+        movs: movimentacoes.filter((mov) => mov.estoque?.tipo_id === tipoId),
+      }
+    })
+    const movsSemGrupo = movimentacoes.filter((mov) => !tiposOs.includes(mov.estoque?.tipo_id))
+    if (movsSemGrupo.length > 0) {
+      gruposDeRolos.push({ chave: 'outros', titulo: 'Outros rolos', subtitulo: '', movs: movsSemGrupo })
+    }
     return (
       <div style={{ minHeight: '100dvh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
         <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
@@ -388,10 +452,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             OS fechada
           </h1>
-          <p style={{ margin: '4px 0 0', color: '#CFCFCF', fontSize: 13 }}>
-            {ag?.clientes?.nome || 'Sem cliente'} · {ag?.tipos_pelicula?.nome || 'Tipo removido'}
-            {ag?.veiculo_modelo ? ` · ${ag.veiculo_modelo}` : ''}
-          </p>
+          <CabecalhoOS ag={ag} />
         </header>
 
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -442,22 +503,33 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
             {!carregandoMovs && movimentacoes.length === 0 && (
               <div style={{ color: '#8A8A8A' }}>Nenhuma movimentação registrada.</div>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {movimentacoes.map((mov) => (
-                <div
-                  key={mov.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    background: '#FFFFFF',
-                    border: '1px solid #E4E7EC',
-                    borderRadius: 12,
-                    padding: 12,
-                  }}
-                >
-                  <span style={{ fontWeight: 600 }}>{mov.estoque?.identificacao || 'Rolo removido'}</span>
-                  <span>{mov.metros} m</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {!carregandoMovs && movimentacoes.length > 0 && gruposDeRolos.map((grupo) => (
+                <div key={grupo.chave} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    {grupo.titulo}
+                    {grupo.subtitulo && <span style={{ color: '#8A8A8A' }}> · {grupo.subtitulo}</span>}
+                  </div>
+                  {grupo.movs.length === 0 && (
+                    <div style={{ color: '#8A8A8A', fontSize: 13 }}>Nenhum rolo registrado.</div>
+                  )}
+                  {grupo.movs.map((mov) => (
+                    <div
+                      key={mov.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: '#FFFFFF',
+                        border: '1px solid #E4E7EC',
+                        borderRadius: 12,
+                        padding: 12,
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>{mov.estoque?.identificacao || 'Rolo removido'}</span>
+                      <span>{mov.metros} m</span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
