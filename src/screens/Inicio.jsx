@@ -45,7 +45,7 @@ function Inicio({ setActiveTab, dataVersion, ativa }) {
   async function carregar() {
     const [cli, est, fin, ag] = await Promise.all([
       supabase.from('clientes').select('*'),
-      supabase.from('estoque').select('*, tipos_pelicula(nome)'),
+      supabase.from('estoque').select('*, tipos_pelicula(nome, ativo)'),
       supabase.from('financeiro').select('*'),
       supabase
         .from('agendamentos')
@@ -69,7 +69,7 @@ function Inicio({ setActiveTab, dataVersion, ativa }) {
   const aReceber = contas
     .filter((c) => c.tipo === 'a_receber' && c.status === 'aberto')
     .reduce((s, c) => s + Number(c.valor), 0)
-  const estoqueBaixo = itensEstoque.filter((i) => i.status === 'ativo' && Number(i.metragem_atual) < LIMITE_ALERTA_M)
+  const estoqueBaixo = itensEstoque.filter((i) => i.status === 'ativo' && i.tipos_pelicula?.ativo !== false && Number(i.metragem_atual) < LIMITE_ALERTA_M)
 
   const agendamentosAbertos = agendamentos.filter((a) => {
     const os = obterOsDoAgendamento(a)

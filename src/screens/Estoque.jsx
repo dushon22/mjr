@@ -109,12 +109,12 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
   async function carregarItens() {
     const { data, error } = await supabase
       .from('estoque')
-      .select('*, tipos_pelicula(nome)')
+      .select('*, tipos_pelicula(nome, ativo)')
       .order('created_at', { ascending: false })
     if (error) {
       console.error('Erro ao buscar estoque:', error)
     } else {
-      setItens(data ?? [])
+      setItens((data ?? []).filter((i) => i.tipos_pelicula?.ativo !== false))
     }
     setLoading(false)
   }
