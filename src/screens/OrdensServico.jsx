@@ -611,9 +611,16 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
                       <div style={{ fontSize: 13, color: '#8A8A8A', textAlign: 'left' }}>
                         {formatarData(ag?.data)} {ag?.hora?.slice(0, 5)}
                       </div>
-                      {ag?.valor != null && (
-                        <div style={{ fontSize: 13, fontWeight: 700, textAlign: 'right' }}>
-                          {formatarValor(ag.valor)}
+                      {(aberta ? ag?.valor : os.valor_pago ?? ag?.valor) != null && (
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700 }}>
+                            {formatarValor(aberta ? ag.valor : os.valor_pago ?? ag.valor)}
+                          </div>
+                          {!aberta && os.valor_pago != null && ag?.valor != null && Number(os.valor_pago) !== Number(ag.valor) && (
+                            <div style={{ fontSize: 12, color: '#8A8A8A' }}>
+                              {formatarValor(ag.valor)}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
