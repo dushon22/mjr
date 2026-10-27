@@ -451,6 +451,11 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
     carregarServicos()
   }, [dataVersion, ativa])
 
+  // Ao abrir a Agenda / trocar de aba, volta ao topo para o cabeçalho não ficar sob a barra de status.
+  useEffect(() => {
+    if (ativa) window.scrollTo(0, 0)
+  }, [ativa])
+
   async function salvar(e) {
     e.preventDefault()
     const itensValidos = itens.filter((item) => item.servico_id)
@@ -1065,6 +1070,16 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
     cursor: 'pointer',
   }
 
+  const setaCalendario = {
+    ...seta,
+    position: 'relative',
+    zIndex: 20,
+    width: 44,
+    minWidth: 44,
+    height: 44,
+    minHeight: 44,
+  }
+
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
       <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
@@ -1254,26 +1269,38 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
             zIndex: 1000,
             background: '#171717',
             overflowY: 'auto',
-            padding: '24px 20px',
+            padding: '0 20px 24px',
             boxSizing: 'border-box',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" style={seta}>
+          <div
+            style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 20,
+              background: '#171717',
+              paddingTop: 'calc(env(safe-area-inset-top) + 12px)',
+              paddingBottom: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" style={setaCalendario}>
               ‹
             </button>
             <div style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 700 }}>
               {rotuloMes(mesCalendario)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" style={seta}>
+              <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" style={setaCalendario}>
                 ›
               </button>
               <button
                 type="button"
                 onClick={() => setMostrarCalendario(false)}
                 aria-label="Fechar calendário"
-                style={{ ...seta, fontSize: 20, marginLeft: 8 }}
+                style={{ ...setaCalendario, fontSize: 20, marginLeft: 8 }}
               >
                 ✕
               </button>
