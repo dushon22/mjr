@@ -123,7 +123,7 @@ function Servicos({ setActiveTab, dataVersion, ativa }) {
     const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
     return (
       <div style={{ minHeight: '100dvh', background: '#FFFFFF' }}>
-        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             {servicoEditando ? 'Editar serviço' : 'Novo serviço'}
           </h1>
@@ -186,7 +186,7 @@ function Servicos({ setActiveTab, dataVersion, ativa }) {
                 padding: 12,
                 borderRadius: 10,
                 border: 'none',
-                background: '#14304D',
+                background: 'var(--mjr-navy)',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -221,7 +221,7 @@ function Servicos({ setActiveTab, dataVersion, ativa }) {
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <button
           type="button"
           onClick={() => setActiveTab('tipos')}
@@ -238,9 +238,9 @@ function Servicos({ setActiveTab, dataVersion, ativa }) {
       </header>
 
       <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {loading && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
+        {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
         {!loading && servicos.length === 0 && (
-          <div style={{ color: '#8A8A8A' }}>Nenhum serviço cadastrado ainda.</div>
+          <div style={{ color: '#9aa0ad' }}>Nenhum serviço cadastrado ainda.</div>
         )}
         {!loading && servicos.map((servico, index) => (
           <div
@@ -255,12 +255,11 @@ function Servicos({ setActiveTab, dataVersion, ativa }) {
               border: '1px solid #E4E7EC',
               borderRadius: 12,
               padding: 14,
-              opacity: servico.ativo ? 1 : 0.6,
             }}
           >
             <div>
-              <div style={{ fontWeight: 600 }}>{servico.nome}</div>
-              <div style={{ fontSize: 13, color: '#8A8A8A', marginTop: 2 }}>
+              <div style={{ fontSize: 16, fontWeight: 500, color: servico.ativo ? '#14202e' : '#6b7280' }}>{servico.nome}</div>
+              <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
                 {CATEGORIAS.find((c) => c.value === servico.categoria)?.label ?? servico.categoria}
                 {' · '}
                 {formatarValor(servico.preco)}
@@ -274,7 +273,7 @@ function Servicos({ setActiveTab, dataVersion, ativa }) {
                 padding: '4px 10px',
                 borderRadius: 999,
                 background: servico.ativo ? '#E9F3E9' : '#EFEFEF',
-                color: servico.ativo ? '#4C7A4E' : '#8A8A8A',
+                color: servico.ativo ? '#4C7A4E' : '#6b7280',
               }}
             >
               {servico.ativo ? 'Ativo' : 'Inativo'}

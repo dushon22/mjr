@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import CampoMoeda from '../components/CampoMoeda'
+import StatusTag from '../components/StatusTag'
 import BotaoFlutuante from '../components/BotaoFlutuante'
 
 const filtros = ['Todos', 'A receber', 'Recebidas', 'A pagar', 'Vencidas']
@@ -63,14 +64,14 @@ function estaVencida(conta, hojeISO) {
 function estiloLinha(conta, hojeISO) {
   if (conta.status === 'pago') {
     if (conta.tipo === 'a_receber') {
-      return { cor: '#4C7A4E', texto: `Recebido em ${formatarData(conta.pago_em)}` }
+      return { tag: 'Recebida', tom: 'verde', cor: '#4C7A4E', texto: `Recebido em ${formatarData(conta.pago_em)}` }
     }
-    return { cor: '#8A8A8A', texto: `Pago em ${formatarData(conta.pago_em)}` }
+    return { tag: 'Paga', tom: 'verde', cor: '#6b7280', texto: `Pago em ${formatarData(conta.pago_em)}` }
   }
   if (estaVencida(conta, hojeISO)) {
-    return { cor: '#A6332C', texto: `Venceu em ${formatarData(conta.vencimento)}` }
+    return { tag: 'Vencida', tom: 'vermelho', cor: 'var(--mjr-red)', texto: `Venceu em ${formatarData(conta.vencimento)}` }
   }
-  return { cor: '#8A8A8A', texto: `Vence em ${formatarData(conta.vencimento)}` }
+  return { tag: conta.tipo === 'a_receber' ? 'A receber' : 'A pagar', tom: 'ambar', cor: '#6b7280', texto: `Vence em ${formatarData(conta.vencimento)}` }
 }
 
 function Financeiro({ dataVersion, ativa }) {
@@ -200,7 +201,7 @@ function Financeiro({ dataVersion, ativa }) {
     const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
     return (
       <div style={{ minHeight: '100dvh', background: '#FFFFFF' }}>
-        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             {contaEditando ? 'Editar lançamento' : 'Novo lançamento'}
           </h1>
@@ -258,7 +259,7 @@ function Financeiro({ dataVersion, ativa }) {
                 padding: 12,
                 borderRadius: 10,
                 border: 'none',
-                background: '#14304D',
+                background: 'var(--mjr-navy)',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -295,9 +296,9 @@ function Financeiro({ dataVersion, ativa }) {
                   flex: 1,
                   padding: 12,
                   borderRadius: 10,
-                  border: '1px solid #A6332C',
+                  border: '1px solid #a32d2d',
                   background: '#FFFFFF',
-                  color: '#A6332C',
+                  color: '#a32d2d',
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}
@@ -339,7 +340,7 @@ function Financeiro({ dataVersion, ativa }) {
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Financeiro
         </h1>
@@ -435,13 +436,14 @@ function Financeiro({ dataVersion, ativa }) {
               onClick={() => setFiltroAtivo(filtro)}
               style={{
                 flexShrink: 0,
-                padding: '8px 14px',
+                height: 36,
+                padding: '0 14px',
                 borderRadius: 999,
                 fontSize: 13,
                 fontWeight: ativo ? 600 : 400,
-                background: ativo ? '#171717' : '#FFFFFF',
-                color: ativo ? '#FFFFFF' : '#8A8A8A',
-                border: ativo ? 'none' : '1px solid #E2E0DC',
+                background: ativo ? 'var(--mjr-navy)' : '#FFFFFF',
+                color: ativo ? '#FFFFFF' : 'var(--mjr-navy)',
+                border: ativo ? '1px solid #2a4f7f' : '1px solid #E2E0DC',
                 cursor: 'pointer',
               }}
             >
@@ -452,12 +454,12 @@ function Financeiro({ dataVersion, ativa }) {
       </div>
 
       <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {loading && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
+        {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
         {!loading && contas.length === 0 && (
-          <div style={{ color: '#8A8A8A' }}>Nenhuma conta cadastrada ainda.</div>
+          <div style={{ color: '#9aa0ad' }}>Nenhuma conta cadastrada ainda.</div>
         )}
         {!loading && contas.length > 0 && contasFiltradas.length === 0 && (
-          <div style={{ color: '#8A8A8A' }}>Nenhum lançamento para este filtro/período.</div>
+          <div style={{ color: '#9aa0ad' }}>Nenhum lançamento para este filtro/período.</div>
         )}
         {!loading && contasFiltradas.length > 0 && secoes.map((secao) => (
           secao.contas.length === 0 ? null : (
@@ -466,7 +468,7 @@ function Financeiro({ dataVersion, ativa }) {
               style={{
                 fontSize: 12,
                 fontWeight: 700,
-                color: '#8A8A8A',
+                color: '#9aa0ad',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 marginBottom: 10,
@@ -504,14 +506,20 @@ function Financeiro({ dataVersion, ativa }) {
                       }}
                     >
                       <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontWeight: 600, textAlign: 'left' }}>
+                        <div style={{ fontSize: 16, fontWeight: 500, color: '#14202e', textAlign: 'left' }}>
                           {conta.clientes?.nome || conta.descricao}
                         </div>
-                        <div style={{ fontSize: 13, color: '#8A8A8A', textAlign: 'left' }}>
+                        {conta.clientes?.nome && conta.descricao && (
+                          <div style={{ fontSize: 13, color: '#6b7280', textAlign: 'left' }}>{conta.descricao}</div>
+                        )}
+                        <div style={{ fontSize: 13, color: '#6b7280', textAlign: 'left' }}>
                           {estilo.texto}
                         </div>
                       </div>
-                      <div style={{ fontWeight: 700 }}>{formatarValor(conta.valor)}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                        <div style={{ fontWeight: 500, color: 'var(--mjr-navy)' }}>{formatarValor(conta.valor)}</div>
+                        <StatusTag tom={estilo.tom}>{estilo.tag}</StatusTag>
+                      </div>
                     </div>
                   </div>
                 )

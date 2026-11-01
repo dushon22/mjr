@@ -6,6 +6,8 @@ import BotaoFlutuante from '../components/BotaoFlutuante'
 
 const LIMITE_ALERTA_M = 5
 
+const formatarM = (n) => Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+
 function Estoque({ setActiveTab, dataVersion, ativa }) {
   const [itens, setItens] = useState([])
   const [tipos, setTipos] = useState([])
@@ -19,8 +21,8 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
   const [novoTipoMarca, setNovoTipoMarca] = useState('')
   const [criandoTipo, setCriandoTipo] = useState(false)
   const [identificacao, setIdentificacao] = useState('')
-  const [larguraM, setLarguraM] = useState('')
-  const [metragemInicial, setMetragemInicial] = useState('')
+  const [larguraM, setLarguraM] = useState('1,52')
+  const [metragemInicial, setMetragemInicial] = useState('30,00')
   const [custo, setCusto] = useState('')
   const [salvando, setSalvando] = useState(false)
 
@@ -33,8 +35,8 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
     setNovoTipoColoracao('')
     setNovoTipoMarca('')
     setIdentificacao('')
-    setLarguraM('')
-    setMetragemInicial('')
+    setLarguraM('1,52')
+    setMetragemInicial('30,00')
     setCusto('')
   }
 
@@ -192,17 +194,22 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
     const campo = {
       width: '100%',
       boxSizing: 'border-box',
-      padding: '12px',
-      borderRadius: 10,
-      border: '1px solid #E4E7EC',
+      height: 42,
+      padding: '0 12px',
+      borderRadius: 12,
+      border: '1px solid #dfe3ea',
       fontSize: 16,
+      color: '#14202e',
       background: '#FFFFFF',
     }
-    const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
+    const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#6b7280', textAlign: 'left' }
+    const cartao = { background: '#FFFFFF', borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }
+    const tituloCartao = { fontSize: 16, fontWeight: 500, color: '#14202e', textAlign: 'left' }
+    const sufixo = { position: 'absolute', right: 12, top: 0, height: 42, display: 'flex', alignItems: 'center', fontSize: 16, color: '#6b7280', pointerEvents: 'none' }
     const tiposSelecionaveis = tipos.filter((t) => t.ativo || t.id === itemEditando?.tipo_id)
     return (
-      <div style={{ minHeight: '100dvh', background: '#FFFFFF' }}>
-        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+      <div style={{ minHeight: '100dvh', background: 'var(--mjr-bg)' }}>
+        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             {itemEditando ? 'Editar rolo' : 'Novo rolo'}
           </h1>
@@ -210,43 +217,45 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
         <form
           onSubmit={salvar}
           style={{
-            padding: '20px 20px calc(var(--nav-bottom) + 100px) 20px',
+            padding: '8px 20px calc(var(--nav-bottom) + 100px) 20px',
             display: 'flex',
             flexDirection: 'column',
             gap: 16,
           }}
         >
-          <div style={rotulo}>
-            <span>Tipo de película</span>
-            <select
-              required
-              value={tipoId}
-              onChange={(e) => {
-                const valor = e.target.value
-                if (valor === '__novo__') {
-                  abrirCadastroTipo()
-                  return
-                }
-                setTipoId(valor)
-              }}
-              style={campo}
-            >
-              <option value="" disabled>
-                {tiposSelecionaveis.length ? 'Selecione um tipo' : 'Nenhum tipo cadastrado'}
-              </option>
-              {tiposSelecionaveis.map((t) => (
-                <option key={t.id} value={t.id}>{t.nome}</option>
-              ))}
-              <option value="__novo__">+ Novo tipo</option>
-            </select>
+          <div style={cartao}>
+            <div style={tituloCartao}>Película</div>
+            <div style={rotulo}>
+              <span>Tipo de película</span>
+              <select
+                required
+                value={tipoId}
+                onChange={(e) => {
+                  const valor = e.target.value
+                  if (valor === '__novo__') {
+                    abrirCadastroTipo()
+                    return
+                  }
+                  setTipoId(valor)
+                }}
+                style={campo}
+              >
+                <option value="" disabled>
+                  {tiposSelecionaveis.length ? 'Selecione um tipo' : 'Nenhum tipo cadastrado'}
+                </option>
+                {tiposSelecionaveis.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nome}</option>
+                ))}
+                <option value="__novo__">+ Novo tipo</option>
+              </select>
             {novoTipoAtivo && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, border: '1px dashed #D0D5DD', borderRadius: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, background: '#f6f7f9', border: '1px solid #dfe3ea', borderRadius: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#4A4A4A' }}>Novo tipo de película</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: '#14202e' }}>Novo tipo de película</span>
                   <button
                     type="button"
                     onClick={cancelarNovoTipo}
-                    style={{ background: 'none', border: 'none', color: '#8A8A8A', cursor: 'pointer', fontSize: 13 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--mjr-navy)', cursor: 'pointer', fontSize: 13 }}
                   >
                     Cancelar
                   </button>
@@ -297,7 +306,7 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
                     padding: 10,
                     borderRadius: 10,
                     border: 'none',
-                    background: '#14304D',
+                    background: 'var(--mjr-navy)',
                     color: '#FFFFFF',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -308,45 +317,62 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
                 </button>
               </div>
             )}
-          </div>
-          <label style={rotulo}>
-            Identificação
-            <input type="text" required value={identificacao} onChange={(e) => setIdentificacao(e.target.value)} style={campo} />
-          </label>
-          <label style={rotulo}>
-            Largura (m)
-            <input
-              type="text"
-              inputMode="decimal"
-              required
-              placeholder="1,52"
-              value={larguraM}
-              onChange={(e) => setLarguraM(formatarDecimalDigitado(e.target.value))}
-              style={campo}
-            />
-          </label>
-          <label style={rotulo}>
-            Metragem inicial (m)
-            <input
-              type="text"
-              inputMode="decimal"
-              required
-              placeholder="30,00"
-              value={metragemInicial}
-              onChange={(e) => setMetragemInicial(formatarDecimalDigitado(e.target.value))}
-              style={campo}
-            />
-          </label>
-          {itemEditando && (
+            </div>
             <label style={rotulo}>
-              Metragem atual (m)
-              <input type="text" disabled value={`${itemEditando.metragem_atual} m`} style={{ ...campo, color: '#8A8A8A' }} />
+              Identificação
+              <input type="text" required placeholder="Ex: Rolo 01" value={identificacao} onChange={(e) => setIdentificacao(e.target.value)} style={campo} />
             </label>
-          )}
-          <label style={rotulo}>
-            Custo
-            <CampoMoeda value={custo} onChange={setCusto} style={campo} />
-          </label>
+          </div>
+
+          <div style={cartao}>
+            <div style={tituloCartao}>Medidas e custo</div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <label style={{ ...rotulo, flex: 1, minWidth: 0 }}>
+                Largura
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    required
+                    placeholder="1,52"
+                    value={larguraM}
+                    onChange={(e) => setLarguraM(formatarDecimalDigitado(e.target.value))}
+                    style={{ ...campo, paddingRight: 32 }}
+                  />
+                  <span style={sufixo}>m</span>
+                </div>
+              </label>
+              <label style={{ ...rotulo, flex: 1, minWidth: 0 }}>
+                Metragem inicial
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    required
+                    placeholder="30,00"
+                    value={metragemInicial}
+                    onChange={(e) => setMetragemInicial(formatarDecimalDigitado(e.target.value))}
+                    style={{ ...campo, paddingRight: 32 }}
+                  />
+                  <span style={sufixo}>m</span>
+                </div>
+              </label>
+            </div>
+            {itemEditando && (
+              <label style={rotulo}>
+                Metragem atual
+                <input type="text" disabled value={`${itemEditando.metragem_atual} m`} style={{ ...campo, color: '#6b7280' }} />
+              </label>
+            )}
+            <label style={rotulo}>
+              Custo do rolo
+              <div style={{ position: 'relative' }}>
+                <span style={{ ...sufixo, right: 'auto', left: 12 }}>R$</span>
+                <CampoMoeda value={custo} onChange={setCusto} semPrefixo placeholder="0,00" style={{ ...campo, paddingLeft: 40 }} />
+              </div>
+            </label>
+          </div>
+
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               type="button"
@@ -354,10 +380,10 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
               style={{
                 flex: 1,
                 padding: 12,
-                borderRadius: 10,
-                border: '1px solid #E4E7EC',
+                borderRadius: 12,
+                border: '1px solid #dfe3ea',
                 background: '#FFFFFF',
-                color: '#4A4A4A',
+                color: '#14202e',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -372,10 +398,10 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
                 style={{
                   flex: 1,
                   padding: 12,
-                  borderRadius: 10,
-                  border: '1px solid #A6332C',
+                  borderRadius: 12,
+                  border: '1px solid #a32d2d',
                   background: '#FFFFFF',
-                  color: '#A6332C',
+                  color: '#a32d2d',
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}
@@ -389,9 +415,9 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
               style={{
                 flex: 1,
                 padding: 12,
-                borderRadius: 10,
-                border: 'none',
-                background: '#14304D',
+                borderRadius: 12,
+                border: '1px solid #2a4f7f',
+                background: 'var(--mjr-navy)',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -408,7 +434,7 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             Estoque
@@ -451,12 +477,12 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
                   padding: 12,
                 }}
               >
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{tipo.nome}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: baixo ? '#A6332C' : '#171717', marginTop: 4 }}>
-                  {tipo.total} m
+                <div style={{ fontSize: 16, fontWeight: 500, color: '#14202e' }}>{tipo.nome}</div>
+                <div style={{ fontSize: 18, fontWeight: 500, color: baixo ? '#a32d2d' : 'var(--mjr-navy)', marginTop: 4 }}>
+                  {formatarM(tipo.total)} m
                 </div>
                 {baixo && (
-                  <div style={{ fontSize: 12, color: '#A6332C', marginTop: 2 }}>Estoque baixo</div>
+                  <div style={{ fontSize: 12, color: '#a32d2d', marginTop: 2 }}>Estoque baixo</div>
                 )}
               </div>
             )
@@ -465,13 +491,14 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
       )}
 
       <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {loading && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
+        {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
         {!loading && itens.length === 0 && (
-          <div style={{ color: '#8A8A8A' }}>Nenhum rolo cadastrado ainda.</div>
+          <div style={{ color: '#9aa0ad' }}>Nenhum rolo cadastrado ainda.</div>
         )}
         {!loading && itens.map((item, index) => {
           const acabou = item.status === 'acabou'
           const baixo = Number(item.metragem_atual) < LIMITE_ALERTA_M
+          const percentual = item.metragem_inicial > 0 ? Math.round(Math.min((item.metragem_atual / item.metragem_inicial) * 100, 100)) : 0
           return (
             <div
               key={item.id ?? index}
@@ -489,33 +516,32 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  gap: 12,
                   marginBottom: 6,
                 }}
               >
-                <div>
-                  <div style={{ fontSize: 12, color: '#8A8A8A' }}>
-                    {item.tipos_pelicula?.nome || 'Tipo removido'}
-                  </div>
-                  <span style={{ fontWeight: 600 }}>{item.identificacao}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <span style={{ fontSize: 16, fontWeight: 500, color: '#14202e' }}>
+                    {item.tipos_pelicula?.nome || item.identificacao || 'Tipo removido'}
+                  </span>
+                  {acabou && (
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        padding: '2px 8px',
+                        borderRadius: 999,
+                        background: '#F5DAD6',
+                        color: '#a32d2d',
+                      }}
+                    >
+                      Acabou
+                    </span>
+                  )}
                 </div>
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    padding: '4px 10px',
-                    borderRadius: 999,
-                    background: acabou ? '#F5DAD6' : '#E9F3E9',
-                    color: acabou ? '#A6332C' : '#4C7A4E',
-                  }}
-                >
-                  {acabou ? 'Acabou' : 'Ativo'}
-                </span>
-              </div>
-
-              <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 8 }}>
-                {item.largura_m ? `${item.largura_m} m largura · ` : ''}
-                <span style={{ color: baixo ? '#A6332C' : '#8A8A8A', fontWeight: baixo ? 600 : 400 }}>
-                  {item.metragem_atual} / {item.metragem_inicial} m
+                <span style={{ flexShrink: 0, fontSize: 18, fontWeight: 500, color: baixo ? '#a32d2d' : 'var(--mjr-navy)' }}>
+                  {formatarM(item.metragem_atual)} m
                 </span>
               </div>
 
@@ -524,21 +550,31 @@ function Estoque({ setActiveTab, dataVersion, ativa }) {
                   width: '100%',
                   height: 6,
                   borderRadius: 999,
-                  background: '#E2E0DC',
+                  background: '#e5e7eb',
                   overflow: 'hidden',
                 }}
               >
                 <div
                   style={{
-                    width: `${item.metragem_inicial > 0 ? Math.min((item.metragem_atual / item.metragem_inicial) * 100, 100) : 0}%`,
+                    width: `${percentual}%`,
                     height: '100%',
-                    background: baixo ? '#A6332C' : '#171717',
+                    background: baixo ? 'var(--mjr-red)' : 'var(--mjr-navy)',
                   }}
                 />
               </div>
 
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 8, fontSize: 13, color: '#6b7280' }}>
+                <span>
+                  {[
+                    item.largura_m ? `${formatarM(item.largura_m)} m de largura` : null,
+                    `de ${formatarM(item.metragem_inicial)} m`,
+                  ].filter(Boolean).join(' · ')}
+                </span>
+                <span style={{ flexShrink: 0 }}>{percentual}% restante</span>
+              </div>
+
               {baixo && !acabou && (
-                <div style={{ fontSize: 12, color: '#A6332C', marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: '#a32d2d', marginTop: 8 }}>
                   Menos de {LIMITE_ALERTA_M} m restantes
                 </div>
               )}

@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import CampoMoeda from '../components/CampoMoeda'
 import { formatarDecimalDigitado, virgulaParaNumero } from '../utils/mascaras'
+import StatusTag from '../components/StatusTag'
+import BotaoFlutuante from '../components/BotaoFlutuante'
+import FormAgendamento from '../components/FormAgendamento'
+import { mesAtualSP, limitesDoMes, rotuloMes, dataLocalSP } from '../utils/periodo'
 
 function formatarData(data) {
   if (!data) return ''
@@ -25,6 +29,15 @@ function formatarValor(valor) {
 }
 
 const FORMAS_PAGAMENTO = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Transferência']
+
+const POR_PAGINA = 20
+const CAMPOS_OS = 'clientes(nome, observacao), tipos_pelicula(nome), agendamento_itens(*, servicos(nome, unidade), tipos_pelicula(nome))'
+const SELECT_OS = `*, agendamentos(*, ${CAMPOS_OS})`
+const SELECT_OS_BUSCA = `*, agendamentos!inner(*, ${CAMPOS_OS})`
+
+function valorDaOs(os) {
+  return os.valor_pago ?? os.agendamentos?.valor
+}
 
 // Itens com a película efetiva: itens antigos sem película usam a do agendamento.
 // Agendamentos antigos sem itens viram um único item com o serviço e a película do agendamento.
@@ -70,7 +83,7 @@ function ItensEObservacao({ ag }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {itens.length > 0 && (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
             Itens
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -81,7 +94,7 @@ function ItensEObservacao({ ag }) {
               >
                 <div>
                   <div style={{ fontWeight: 600 }}>{item.servicoNome}</div>
-                  <div style={{ fontSize: 13, color: '#8A8A8A' }}>{item.tipoNome}</div>
+                  <div style={{ fontSize: 13, color: '#6b7280' }}>{item.tipoNome}</div>
                 </div>
                 <span>{formatarValor(item.valor)}</span>
               </div>
@@ -91,14 +104,14 @@ function ItensEObservacao({ ag }) {
       )}
       {(observacaoAgendamento || observacaoCliente) && (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
             Observação
           </div>
           {observacaoAgendamento && (
             <p style={{ margin: 0, fontSize: 13, whiteSpace: 'pre-wrap' }}>{observacaoAgendamento}</p>
           )}
           {observacaoCliente && (
-            <p style={{ margin: observacaoAgendamento ? '8px 0 0' : 0, fontSize: 13, color: '#8A8A8A', whiteSpace: 'pre-wrap' }}>
+            <p style={{ margin: observacaoAgendamento ? '8px 0 0' : 0, fontSize: 13, color: '#6b7280', whiteSpace: 'pre-wrap' }}>
               {observacaoCliente}
             </p>
           )}
@@ -112,7 +125,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
   const [ordens, setOrdens] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [view, setView] = useState('lista') // 'lista' | 'fechar' | 'detalhes'
+  const [view, setView] = useState('lista') // 'lista' | 'fechar' | 'detalhes' | 'nova'
   const [osAtual, setOsAtual] = useState(null)
 
   const [rolos, setRolos] = useState([])
@@ -126,17 +139,76 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
   const [movimentacoes, setMovimentacoes] = useState([])
   const [carregandoMovs, setCarregandoMovs] = useState(false)
 
+  const [totalFechadas, setTotalFechadas] = useState(0)
+  const [mesRef, setMesRef] = useState(mesAtualSP)
+  const [busca, setBusca] = useState('')
+  const [buscaAplicada, setBuscaAplicada] = useState('')
+  const [limite, setLimite] = useState(POR_PAGINA)
+  const [fechadas, setFechadas] = useState([])
+  const [totalLista, setTotalLista] = useState(0)
+  const [somaMes, setSomaMes] = useState(0)
+  const [carregandoFechadas, setCarregandoFechadas] = useState(true)
+  const [ultimoMes, setUltimoMes] = useState(null) // mês da OS fechada mais recente
+  const abriuNoUltimoMes = useRef(false)
+
   async function carregarOrdens() {
-    const { data, error } = await supabase
-      .from('ordens_servico')
-      .select('*, agendamentos(*, clientes(nome, observacao), tipos_pelicula(nome), agendamento_itens(*, servicos(nome, unidade), tipos_pelicula(nome)))')
-      .order('created_at', { ascending: false })
-    if (error) {
-      console.error('Erro ao buscar ordens de serviço:', error)
+    const [abertas, fechadasCount] = await Promise.all([
+      supabase
+        .from('ordens_servico')
+        .select(SELECT_OS)
+        .eq('status', 'aberta')
+        .order('created_at', { ascending: false }),
+      supabase.from('ordens_servico').select('id', { count: 'exact', head: true }).neq('status', 'aberta'),
+    ])
+    if (abertas.error) {
+      console.error('Erro ao buscar ordens de serviço:', abertas.error)
     } else {
-      setOrdens(data ?? [])
+      setOrdens(abertas.data ?? [])
     }
+    setTotalFechadas(fechadasCount.count ?? 0)
     setLoading(false)
+  }
+
+  async function carregarFechadas() {
+    const termo = buscaAplicada.replace(/[,()%*\\]/g, ' ').trim()
+    let lista
+    let total
+    let soma = 0
+    if (termo) {
+      const { data: clientesBusca } = await supabase.from('clientes').select('id').ilike('nome', `%${termo}%`).limit(500)
+      const ids = (clientesBusca ?? []).map((c) => c.id)
+      const filtro = [`veiculo_modelo.ilike.%${termo}%`, ids.length ? `cliente_id.in.(${ids.join(',')})` : null].filter(Boolean).join(',')
+      const res = await supabase
+        .from('ordens_servico')
+        .select(SELECT_OS_BUSCA, { count: 'exact' })
+        .neq('status', 'aberta')
+        .or(filtro, { referencedTable: 'agendamentos' })
+        .order('fechada_em', { ascending: false })
+        .range(0, limite - 1)
+      if (res.error) console.error('Erro ao buscar OS fechadas:', res.error)
+      lista = res.data ?? []
+      total = res.count ?? lista.length
+    } else {
+      const { inicio, fim } = limitesDoMes(mesRef)
+      const base = (colunas, opcoes) => supabase
+        .from('ordens_servico')
+        .select(colunas, opcoes)
+        .neq('status', 'aberta')
+        .gte('fechada_em', inicio)
+        .lt('fechada_em', fim)
+      const [res, resumo] = await Promise.all([
+        base(SELECT_OS).order('fechada_em', { ascending: false }).range(0, limite - 1),
+        base('valor_pago, agendamentos(valor)', { count: 'exact' }),
+      ])
+      if (res.error) console.error('Erro ao buscar OS fechadas:', res.error)
+      lista = res.data ?? []
+      total = resumo.count ?? lista.length
+      soma = (resumo.data ?? []).reduce((s, o) => s + Number(valorDaOs(o) ?? 0), 0)
+    }
+    setFechadas(lista)
+    setTotalLista(total)
+    setSomaMes(soma)
+    setCarregandoFechadas(false)
   }
 
   useEffect(() => {
@@ -144,16 +216,64 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
   }, [dataVersion, ativa])
 
   useEffect(() => {
-    if (!osAlvo || ordens.length === 0) return
-    const os = ordens.find((o) => o.id === osAlvo.id)
-    if (os) {
-      if (osAlvo.modo === 'detalhes') {
-        abrirDetalhes(os)
+    if (!ativa) return
+    supabase
+      .from('ordens_servico')
+      .select('fechada_em')
+      .neq('status', 'aberta')
+      .not('fechada_em', 'is', null)
+      .order('fechada_em', { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        const iso = dataLocalSP(data?.[0]?.fechada_em)
+        const mes = iso ? { ano: Number(iso.slice(0, 4)), mes: Number(iso.slice(5, 7)) } : null
+        setUltimoMes(mes)
+        if (abriuNoUltimoMes.current) return
+        abriuNoUltimoMes.current = true
+        const atual = mesAtualSP()
+        if (mes && (mes.ano !== atual.ano || mes.mes !== atual.mes)) setMesRef(mes)
+      })
+  }, [dataVersion, ativa])
+
+  useEffect(() => {
+    if (ativa) carregarFechadas()
+  }, [dataVersion, ativa, mesRef, buscaAplicada, limite])
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setBuscaAplicada(busca.trim())
+      setLimite(POR_PAGINA)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [busca])
+
+  function mudarMes(delta) {
+    setMesRef(({ ano, mes }) => {
+      const d = new Date(ano, mes - 1 + delta, 1)
+      return { ano: d.getFullYear(), mes: d.getMonth() + 1 }
+    })
+    setLimite(POR_PAGINA)
+  }
+
+  useEffect(() => {
+    if (!osAlvo) return
+    const alvo = osAlvo
+    async function abrirAlvo() {
+      let os = ordens.find((o) => o.id === alvo.id)
+      if (alvo.modo === 'detalhes') {
+        // Fechadas não ficam na lista em memória.
+        if (!os) {
+          const { data } = await supabase.from('ordens_servico').select(SELECT_OS).eq('id', alvo.id).maybeSingle()
+          os = data
+        }
+        if (os) abrirDetalhes(os)
       } else {
-        abrirFechar(os)
+        if (ordens.length === 0) return
+        if (os) abrirFechar(os)
       }
+      limparOsAlvo?.()
     }
-    limparOsAlvo?.()
+    abrirAlvo()
   }, [osAlvo, ordens, limparOsAlvo])
 
   async function abrirFechar(os) {
@@ -205,6 +325,21 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
     setFormaPagamento('')
     setErroFechar('')
     setMovimentacoes([])
+  }
+
+  // Abre uma OS direto, sem agendamento prévio: o formulário cria o agendamento (agora) e aqui garantimos a OS aberta.
+  async function aoAbrirOs(agendamentoId) {
+    const { data: existente } = await supabase.from('ordens_servico').select('id').eq('agendamento_id', agendamentoId).maybeSingle()
+    if (!existente) {
+      const { error } = await supabase.from('ordens_servico').insert({ agendamento_id: agendamentoId, status: 'aberta' })
+      if (error) {
+        console.error('Erro ao abrir OS:', error)
+        alert('O agendamento foi salvo, mas não foi possível abrir a OS. Tente novamente.')
+        return
+      }
+    }
+    setView('lista')
+    await carregarOrdens()
   }
 
   function alternarRolo(itemId, roloId) {
@@ -275,11 +410,23 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
     background: '#FFFFFF',
   }
 
+  if (view === 'nova') {
+    return (
+      <FormAgendamento
+        modoOS
+        titulo="Abrir OS"
+        rotuloSalvar="Abrir OS"
+        onSalvo={aoAbrirOs}
+        onCancelar={() => setView('lista')}
+      />
+    )
+  }
+
   if (view === 'fechar' && osAtual) {
     const ag = osAtual.agendamentos
     return (
       <div style={{ minHeight: '100dvh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
-        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <button
             type="button"
             onClick={fecharView}
@@ -304,13 +451,13 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
           <ItensEObservacao ag={ag} />
 
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
               Rolos utilizados
             </div>
-            <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 12 }}>
+            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
               Para cada item, selecione um ou mais rolos da película do item e informe os metros usados de cada um.
             </div>
-            {carregandoRolos && <div style={{ color: '#8A8A8A' }}>Carregando rolos...</div>}
+            {carregandoRolos && <div style={{ color: '#9aa0ad' }}>Carregando rolos...</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {!carregandoRolos && itensComPelicula(ag).map((item) => {
                 const rolosDoItem = rolos.filter((rolo) => rolo.tipo_id === item.tipoId)
@@ -318,10 +465,10 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
                 return (
                   <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ fontWeight: 600 }}>
-                      {item.servicoNome} · <span style={{ color: '#8A8A8A' }}>{item.tipoNome}</span>
+                      {item.servicoNome} · <span style={{ color: '#6b7280' }}>{item.tipoNome}</span>
                     </div>
                     {rolosDoItem.length === 0 && (
-                      <div style={{ color: '#A6332C', fontSize: 13 }}>Nenhum rolo com metragem disponível para este tipo de película.</div>
+                      <div style={{ color: '#a32d2d', fontSize: 13 }}>Nenhum rolo com metragem disponível para este tipo de película.</div>
                     )}
                     {rolosDoItem.map((rolo) => {
                       const marcado = rolo.id in selecionadosDoItem
@@ -329,7 +476,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
                         <div
                           key={rolo.id}
                           style={{
-                            border: `1px solid ${marcado ? '#14304D' : '#E4E7EC'}`,
+                            border: `1px solid ${marcado ? 'var(--mjr-navy)' : '#E4E7EC'}`,
                             borderRadius: 12,
                             padding: 12,
                             background: marcado ? '#E4EAF1' : '#FFFFFF',
@@ -341,7 +488,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
                           >
                             <div>
                               <div style={{ fontWeight: 600 }}>{rolo.identificacao}</div>
-                              <div style={{ fontSize: 13, color: '#8A8A8A' }}>
+                              <div style={{ fontSize: 13, color: '#6b7280' }}>
                                 {rolo.largura_m ? `${rolo.largura_m} m largura · ` : ''}
                                 {rolo.metragem_atual} m disponíveis
                               </div>
@@ -372,7 +519,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
             Valor pago
             <CampoMoeda value={valorPago} onChange={setValorPago} required style={campo} />
             {ag?.valor != null && valorPago !== '' && Number(valorPago) !== Number(ag.valor) && (
-              <span style={{ fontSize: 13, fontWeight: 600, color: Number(valorPago) < Number(ag.valor) ? '#A6332C' : '#4C7A4E' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: Number(valorPago) < Number(ag.valor) ? '#a32d2d' : '#4C7A4E' }}>
                 {Number(valorPago) < Number(ag.valor)
                   ? `Desconto de ${formatarValor(Number(ag.valor) - Number(valorPago))}`
                   : `Acréscimo de ${formatarValor(Number(valorPago) - Number(ag.valor))}`}
@@ -396,7 +543,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
           </label>
 
           {erroFechar && (
-            <div style={{ color: '#A6332C', fontSize: 13, fontWeight: 600 }}>{erroFechar}</div>
+            <div style={{ color: '#a32d2d', fontSize: 13, fontWeight: 600 }}>{erroFechar}</div>
           )}
 
           <button
@@ -407,7 +554,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
               padding: 12,
               borderRadius: 10,
               border: 'none',
-              background: '#14304D',
+              background: 'var(--mjr-navy)',
               color: '#FFFFFF',
               fontWeight: 600,
               cursor: 'pointer',
@@ -441,7 +588,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
     }
     return (
       <div style={{ minHeight: '100dvh', background: '#FFFFFF', paddingBottom: 'calc(56px + env(safe-area-inset-bottom))' }}>
-        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <button
             type="button"
             onClick={fecharView}
@@ -456,7 +603,7 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
         </header>
 
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ fontSize: 13, color: '#8A8A8A' }}>
+          <div style={{ fontSize: 13, color: '#6b7280' }}>
             Fechada em {formatarDataHora(osAtual.fechada_em)}
           </div>
 
@@ -474,19 +621,19 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
             >
               {ag?.valor != null && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, color: '#8A8A8A' }}>Valor combinado</span>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>Valor combinado</span>
                   <span style={{ fontWeight: 600 }}>{formatarValor(ag.valor)}</span>
                 </div>
               )}
               {(osAtual.valor_pago != null || ag?.valor != null) && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, color: '#8A8A8A' }}>Valor pago</span>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>Valor pago</span>
                   <span style={{ fontWeight: 700 }}>{formatarValor(osAtual.valor_pago ?? ag.valor)}</span>
                 </div>
               )}
               {osAtual.forma_pagamento && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, color: '#8A8A8A' }}>Forma de pagamento</span>
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>Forma de pagamento</span>
                   <span style={{ fontWeight: 600 }}>{osAtual.forma_pagamento}</span>
                 </div>
               )}
@@ -496,22 +643,22 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
           <ItensEObservacao ag={ag} />
 
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
               Rolos utilizados
             </div>
-            {carregandoMovs && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
+            {carregandoMovs && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
             {!carregandoMovs && movimentacoes.length === 0 && (
-              <div style={{ color: '#8A8A8A' }}>Nenhuma movimentação registrada.</div>
+              <div style={{ color: '#9aa0ad' }}>Nenhuma movimentação registrada.</div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {!carregandoMovs && movimentacoes.length > 0 && gruposDeRolos.map((grupo) => (
                 <div key={grupo.chave} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ fontWeight: 600 }}>
                     {grupo.titulo}
-                    {grupo.subtitulo && <span style={{ color: '#8A8A8A' }}> · {grupo.subtitulo}</span>}
+                    {grupo.subtitulo && <span style={{ color: '#6b7280' }}> · {grupo.subtitulo}</span>}
                   </div>
                   {grupo.movs.length === 0 && (
-                    <div style={{ color: '#8A8A8A', fontSize: 13 }}>Nenhum rolo registrado.</div>
+                    <div style={{ color: '#9aa0ad', fontSize: 13 }}>Nenhum rolo registrado.</div>
                   )}
                   {grupo.movs.map((mov) => (
                     <div
@@ -539,98 +686,161 @@ function OrdensServico({ osAlvo, limparOsAlvo, dataVersion, ativa }) {
     )
   }
 
-  const secoes = [
-    { titulo: 'Em aberto', ordens: ordens.filter((o) => o.status === 'aberta') },
-    { titulo: 'Fechadas', ordens: ordens.filter((o) => o.status !== 'aberta') },
-  ]
+  const abertas = ordens
+  const emBusca = buscaAplicada !== ''
+  const atual = mesAtualSP()
+  const noMesAtual = mesRef.ano === atual.ano && mesRef.mes === atual.mes
+  const restantes = Math.max(0, totalLista - fechadas.length)
+
+  function cartaoOs(os) {
+    const ag = os.agendamentos
+    const aberta = os.status === 'aberta'
+    return (
+      <div
+        key={os.id}
+        onClick={() => (aberta ? abrirFechar(os) : abrirDetalhes(os))}
+        style={{
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'stretch',
+          background: '#FFFFFF',
+          border: '1px solid #E4E7EC',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ width: 4, background: aberta ? 'var(--mjr-navy)' : '#6b7280' }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, padding: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16, fontWeight: 500, color: '#14202e' }}>{ag?.clientes?.nome || 'Sem cliente'}</span>
+            <StatusTag tom={aberta ? 'azul' : 'verde'}>{aberta ? 'Aberta' : 'Fechada'}</StatusTag>
+          </div>
+          <div style={{ fontSize: 13, color: '#6b7280', textAlign: 'left' }}>
+            {ag?.tipos_pelicula?.nome || 'Tipo removido'} · {ag?.servico}
+            {ag?.veiculo_modelo ? ` · ${ag.veiculo_modelo}` : ''}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 13, color: '#6b7280', textAlign: 'left' }}>
+              {formatarData(ag?.data)} {ag?.hora?.slice(0, 5)}
+            </span>
+            {(aberta ? ag?.valor : os.valor_pago ?? ag?.valor) != null && (
+              <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--mjr-navy)' }}>
+                {formatarValor(aberta ? ag.valor : os.valor_pago ?? ag.valor)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const tituloSecao = { fontSize: 12, fontWeight: 700, color: '#9aa0ad', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }
+  const setaMes = { background: 'none', border: 'none', color: '#CFCFCF', fontSize: 22, lineHeight: 1, cursor: 'pointer', padding: '0 8px' }
 
   return (
     <div style={{ paddingBottom: 'calc(var(--nav-bottom) + 100px)' }}>
-      <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Ordens de serviço
         </h1>
         <p style={{ margin: '4px 0 0', color: '#CFCFCF', fontSize: 13 }}>
-          {secoes[0].ordens.length} abertas · {secoes[1].ordens.length} fechadas
+          {abertas.length} em aberto · {totalFechadas} fechadas no total
         </p>
       </header>
 
       <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {loading && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
-        {!loading && ordens.length === 0 && (
-          <div style={{ color: '#8A8A8A' }}>Nenhuma OS gerada ainda.</div>
+        {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
+        {!loading && abertas.length === 0 && totalFechadas === 0 && (
+          <div style={{ color: '#9aa0ad' }}>Nenhuma OS gerada ainda.</div>
         )}
-        {!loading && ordens.length > 0 && secoes.map((secao) => (
-          <section key={secao.titulo}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-              {secao.titulo}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {secao.ordens.length === 0 && (
-                <div style={{ fontSize: 13, color: '#8A8A8A' }}>Nenhuma OS.</div>
+        {!loading && (abertas.length > 0 || totalFechadas > 0) && (
+          <>
+            <section>
+              <div style={tituloSecao}>Em aberto</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {abertas.length === 0 && <div style={{ fontSize: 13, color: '#9aa0ad' }}>Nenhuma OS.</div>}
+                {abertas.map(cartaoOs)}
+              </div>
+            </section>
+
+            <section>
+              <div style={tituloSecao}>Fechadas</div>
+              <input
+                type="search"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar cliente ou veículo"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  height: 42,
+                  padding: '0 14px',
+                  borderRadius: 10,
+                  border: 'none',
+                  background: '#2a2c33',
+                  color: '#f2f3f5',
+                  fontSize: 16,
+                  marginBottom: 12,
+                }}
+              />
+              {!emBusca && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" style={setaMes}>‹</button>
+                    <div style={{ color: '#f2f3f5', fontWeight: 600, fontSize: 14 }}>{rotuloMes(mesRef)}</div>
+                    <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" disabled={noMesAtual} style={{ ...setaMes, opacity: noMesAtual ? 0.3 : 1, cursor: noMesAtual ? 'default' : 'pointer' }}>›</button>
+                  </div>
+                  <div style={{ textAlign: 'center', color: '#9aa0ad', fontSize: 13, marginTop: 4 }}>
+                    {totalLista} OS · {formatarValor(somaMes)}
+                  </div>
+                </div>
               )}
-              {secao.ordens.map((os) => {
-                const ag = os.agendamentos
-                const aberta = os.status === 'aberta'
-                return (
-                  <div
-                    key={os.id}
-                    onClick={() => (aberta ? abrirFechar(os) : abrirDetalhes(os))}
-                    style={{
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'stretch',
-                      background: '#FFFFFF',
-                      border: '1px solid #E4E7EC',
-                      borderRadius: 12,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div style={{ width: 4, background: aberta ? '#14304D' : '#8A8A8A' }} />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, padding: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 600 }}>{ag?.clientes?.nome || 'Sem cliente'}</span>
-                        <span
-                          style={{
-                            flexShrink: 0,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            padding: '4px 10px',
-                            borderRadius: 999,
-                            background: aberta ? '#E4EAF1' : '#E9F3E9',
-                            color: aberta ? '#14304D' : '#4C7A4E',
-                          }}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {!carregandoFechadas && fechadas.length === 0 && (
+                  emBusca || !ultimoMes ? (
+                    <div style={{ fontSize: 13, color: '#9aa0ad' }}>Nenhuma OS.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                      <div style={{ fontSize: 13, color: '#9aa0ad' }}>Nenhuma OS fechada em {rotuloMes(mesRef)}.</div>
+                      {(ultimoMes.ano !== mesRef.ano || ultimoMes.mes !== mesRef.mes) && (
+                        <button
+                          type="button"
+                          onClick={() => { setMesRef(ultimoMes); setLimite(POR_PAGINA) }}
+                          style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.35)', background: 'transparent', color: '#f2f3f5', fontWeight: 600, cursor: 'pointer' }}
                         >
-                          {aberta ? 'Aberta' : 'Fechada'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 13, color: '#8A8A8A', textAlign: 'left' }}>
-                        {ag?.tipos_pelicula?.nome || 'Tipo removido'} · {ag?.servico}
-                        {ag?.veiculo_modelo ? ` · ${ag.veiculo_modelo}` : ''}
-                      </div>
-                      <div style={{ fontSize: 13, color: '#8A8A8A', textAlign: 'left' }}>
-                        {formatarData(ag?.data)} {ag?.hora?.slice(0, 5)}
-                      </div>
-                      {(aberta ? ag?.valor : os.valor_pago ?? ag?.valor) != null && (
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700 }}>
-                            {formatarValor(aberta ? ag.valor : os.valor_pago ?? ag.valor)}
-                          </div>
-                          {!aberta && os.valor_pago != null && ag?.valor != null && Number(os.valor_pago) !== Number(ag.valor) && (
-                            <div style={{ fontSize: 12, color: '#8A8A8A' }}>
-                              {formatarValor(ag.valor)}
-                            </div>
-                          )}
-                        </div>
+                          Ver {rotuloMes(ultimoMes)}
+                        </button>
                       )}
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        ))}
+                  )
+                )}
+                {fechadas.map(cartaoOs)}
+                {restantes > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLimite((l) => l + POR_PAGINA)}
+                    style={{
+                      padding: 12,
+                      borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.35)',
+                      background: 'transparent',
+                      color: '#f2f3f5',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Ver mais {Math.min(POR_PAGINA, restantes)} OS
+                  </button>
+                )}
+              </div>
+            </section>
+          </>
+        )}
       </div>
+
+      <BotaoFlutuante ativa={ativa} onClick={() => setView('nova')}>
+        +
+      </BotaoFlutuante>
     </div>
   )
 }

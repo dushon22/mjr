@@ -130,7 +130,7 @@ function TiposPelicula({ setActiveTab, dataVersion, ativa }) {
     opcoesColoracao.sort(compararColoracao)
     return (
       <div style={{ minHeight: '100dvh', background: '#FFFFFF' }}>
-        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             {tipoEditando ? 'Editar tipo de película' : 'Novo tipo de película'}
           </h1>
@@ -194,7 +194,7 @@ function TiposPelicula({ setActiveTab, dataVersion, ativa }) {
                 padding: 12,
                 borderRadius: 10,
                 border: 'none',
-                background: '#14304D',
+                background: 'var(--mjr-navy)',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -229,7 +229,7 @@ function TiposPelicula({ setActiveTab, dataVersion, ativa }) {
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button
             type="button"
@@ -255,9 +255,9 @@ function TiposPelicula({ setActiveTab, dataVersion, ativa }) {
       </header>
 
       <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {loading && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
+        {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
         {!loading && tipos.length === 0 && (
-          <div style={{ color: '#8A8A8A' }}>Nenhum tipo de película cadastrado ainda.</div>
+          <div style={{ color: '#9aa0ad' }}>Nenhum tipo de película cadastrado ainda.</div>
         )}
         {!loading && tipos.map((tipo, index) => (
           <div
@@ -272,13 +272,12 @@ function TiposPelicula({ setActiveTab, dataVersion, ativa }) {
               border: '1px solid #E4E7EC',
               borderRadius: 12,
               padding: 14,
-              opacity: tipo.ativo ? 1 : 0.6,
             }}
           >
             <div>
-              <div style={{ fontWeight: 600 }}>{tipo.material || tipo.nome}</div>
+              <div style={{ fontSize: 16, fontWeight: 500, color: tipo.ativo ? '#14202e' : '#6b7280' }}>{tipo.material || tipo.nome}</div>
               {(tipo.coloracao || tipo.marca) && (
-                <div style={{ fontSize: 13, color: '#8A8A8A', marginTop: 2 }}>
+                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
                   {[tipo.coloracao, tipo.marca].filter(Boolean).join(' · ')}
                 </div>
               )}
@@ -290,7 +289,7 @@ function TiposPelicula({ setActiveTab, dataVersion, ativa }) {
                 padding: '4px 10px',
                 borderRadius: 999,
                 background: tipo.ativo ? '#E9F3E9' : '#EFEFEF',
-                color: tipo.ativo ? '#4C7A4E' : '#8A8A8A',
+                color: tipo.ativo ? '#4C7A4E' : '#6b7280',
               }}
             >
               {tipo.ativo ? 'Ativo' : 'Inativo'}

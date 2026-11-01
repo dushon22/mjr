@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import CampoTelefone from '../components/CampoTelefone'
 import CampoPlaca from '../components/CampoPlaca'
 import { formatarTelefone, formatarPlaca } from '../utils/mascaras'
+import StatusTag from '../components/StatusTag'
 import BotaoFlutuante from '../components/BotaoFlutuante'
 
 const filtros = ['Todos', 'Automotivo', 'Residencial', 'Comercial']
@@ -137,7 +138,7 @@ function Clientes({ dataVersion, ativa }) {
     const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
     return (
       <div style={{ minHeight: '100dvh', background: '#FFFFFF' }}>
-        <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
           <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
             {clienteEditando ? 'Editar cliente' : 'Novo cliente'}
           </h1>
@@ -223,9 +224,9 @@ function Clientes({ dataVersion, ativa }) {
                   flex: 1,
                   padding: 12,
                   borderRadius: 10,
-                  border: '1px solid #A6332C',
+                  border: '1px solid #a32d2d',
                   background: '#FFFFFF',
-                  color: '#A6332C',
+                  color: '#a32d2d',
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}
@@ -241,7 +242,7 @@ function Clientes({ dataVersion, ativa }) {
                 padding: 12,
                 borderRadius: 10,
                 border: 'none',
-                background: '#14304D',
+                background: 'var(--mjr-navy)',
                 color: '#FFFFFF',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -258,7 +259,7 @@ function Clientes({ dataVersion, ativa }) {
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: '#171717', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
+      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
         <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
           Clientes
         </h1>
@@ -305,13 +306,14 @@ function Clientes({ dataVersion, ativa }) {
               type="button"
               style={{
                 flexShrink: 0,
-                padding: '8px 14px',
+                height: 36,
+                padding: '0 14px',
                 borderRadius: 999,
                 fontSize: 13,
                 fontWeight: ativo ? 600 : 400,
-                background: ativo ? '#171717' : '#FFFFFF',
-                color: ativo ? '#FFFFFF' : '#8A8A8A',
-                border: ativo ? 'none' : '1px solid #E2E0DC',
+                background: ativo ? 'var(--mjr-navy)' : '#FFFFFF',
+                color: ativo ? '#FFFFFF' : 'var(--mjr-navy)',
+                border: ativo ? '1px solid #2a4f7f' : '1px solid #E2E0DC',
                 cursor: 'pointer',
               }}
             >
@@ -322,9 +324,9 @@ function Clientes({ dataVersion, ativa }) {
       </div>
 
       <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {loading && <div style={{ color: '#8A8A8A' }}>Carregando...</div>}
+        {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
         {!loading && clientes.length === 0 && (
-          <div style={{ color: '#8A8A8A' }}>Nenhum cliente cadastrado ainda.</div>
+          <div style={{ color: '#9aa0ad' }}>Nenhum cliente cadastrado ainda.</div>
         )}
         {!loading && clientes.map((cliente, index) => {
           const rosa = index % 2 === 0
@@ -356,35 +358,25 @@ function Clientes({ dataVersion, ativa }) {
                   flexShrink: 0,
                   fontWeight: 700,
                   background: rosa ? '#E4EAF1' : '#EFEFEF',
-                  color: rosa ? '#14304D' : '#4A4A4A',
+                  color: rosa ? 'var(--mjr-navy)' : '#4A4A4A',
                 }}
               >
                 {iniciais(cliente.nome)}
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600 }}>{cliente.nome}</div>
-                <div style={{ fontSize: 13, color: '#8A8A8A' }}>
-                  {cliente.tipo === 'automotivo' ? formatarPlaca(cliente.veiculo_imovel) : cliente.veiculo_imovel}
-                  {cliente.tipo === 'automotivo' && cliente.veiculo_modelo && ` · ${cliente.veiculo_modelo}`}
-                  {' · '}
-                  {formatarTelefone(cliente.telefone)}
+                <div style={{ fontSize: 16, fontWeight: 500, color: '#14202e' }}>{cliente.nome}</div>
+                <div style={{ fontSize: 13, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {[
+                    cliente.tipo ? cliente.tipo.charAt(0).toUpperCase() + cliente.tipo.slice(1) : null,
+                    cliente.tipo === 'automotivo'
+                      ? cliente.veiculo_modelo || formatarPlaca(cliente.veiculo_imovel)
+                      : cliente.veiculo_imovel,
+                  ].filter(Boolean).join(' · ')}
                 </div>
               </div>
 
-              <span
-                style={{
-                  flexShrink: 0,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  background: pendente ? '#FCF3F1' : '#E9F3E9',
-                  color: pendente ? '#A6332C' : '#4C7A4E',
-                }}
-              >
-                {pendente ? 'Pendente' : 'Em dia'}
-              </span>
+              <StatusTag tom={pendente ? 'ambar' : 'verde'}>{pendente ? 'Pendente' : 'Em dia'}</StatusTag>
             </div>
           )
         })}
