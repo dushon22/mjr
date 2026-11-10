@@ -16,8 +16,6 @@ const TIPOS_LANCAMENTO = [
   { valor: 'gasto', rotulo: 'Gasto' },
 ]
 
-const VERDE = '#6FAE72'
-const VERMELHO = '#C97A73'
 
 function formatarValor(valor) {
   return `R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -259,9 +257,9 @@ function Financeiro({ dataVersion, ativa, alvoFinanceiro }) {
   ]
 
   const cardsTopo = [
-    { rotulo: 'Recebido', valor: totalRecebido, cor: VERDE },
-    { rotulo: 'A receber', valor: totalAReceber, cor: '#E0B15A' },
-    { rotulo: 'Gastos', valor: totalGastos, cor: VERMELHO },
+    { rotulo: 'Recebido', valor: totalRecebido, cor: '#6fcf8a' },
+    { rotulo: 'A receber', valor: totalAReceber, cor: '#f2b84b' },
+    { rotulo: 'Gastos', valor: totalGastos, cor: totalGastos > 0 ? '#ff9b90' : '#b8bdc9' },
   ]
 
   const campo = {
@@ -332,8 +330,8 @@ function Financeiro({ dataVersion, ativa, alvoFinanceiro }) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           {cardsTopo.map((card) => (
-            <div key={card.rotulo} style={{ flex: '1 1 0', minWidth: 0, background: '#232323', borderRadius: 12, padding: 12 }}>
-              <div style={{ color: '#CFCFCF', fontSize: 12 }}>{card.rotulo}</div>
+            <div key={card.rotulo} style={{ flex: '1 1 0', minWidth: 0, background: '#1d2029', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 12 }}>
+              <div style={{ color: '#b8bdc9', fontSize: 12 }}>{card.rotulo}</div>
               <div style={{ color: card.cor, fontSize: 15, fontWeight: 700, marginTop: 4, whiteSpace: 'nowrap' }}>
                 {formatarValor(card.valor)}
               </div>
@@ -347,13 +345,14 @@ function Financeiro({ dataVersion, ativa, alvoFinanceiro }) {
             justifyContent: 'space-between',
             alignItems: 'center',
             marginTop: 12,
-            background: '#232323',
+            background: '#1d2029',
+            border: '1px solid rgba(255,255,255,0.07)',
             borderRadius: 12,
             padding: '12px 14px',
           }}
         >
-          <div style={{ color: '#CFCFCF', fontSize: 13 }}>Saldo do caixa</div>
-          <div style={{ color: saldoCaixa < 0 ? VERMELHO : '#FFFFFF', fontSize: 17, fontWeight: 700 }}>
+          <div style={{ color: '#b8bdc9', fontSize: 13 }}>Saldo do caixa</div>
+          <div style={{ color: saldoCaixa < 0 ? '#ff9b90' : '#FFFFFF', fontSize: 17, fontWeight: 700 }}>
             {formatarSaldo(saldoCaixa)}
           </div>
         </div>
