@@ -41,6 +41,12 @@ body,
   background: #16171d;
 }
 
+/* Casca fixa: a página nunca rola; quem rola é .wrap (mesma abordagem do Meu Mês). */
+html,
+body {
+  overflow: hidden;
+}
+
 html,
 body {
   height: 100%;
@@ -103,15 +109,40 @@ textarea::placeholder {
 }
 
 #root {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
   width: 1126px;
   max-width: 100%;
   margin: 0 auto;
   text-align: center;
   border-inline: 1px solid var(--border);
-  min-height: 100dvh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+.wrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Modal aberto: o conteúdo atrás não rola e a barra/+ saem de cena. */
+.modal-aberto .wrap {
+  overflow: hidden;
+}
+.modal-aberto .bottom-nav,
+.modal-aberto .fab {
+  display: none;
 }
 
 h1,
@@ -322,8 +353,3 @@ code {
   outline-offset: 2px;
 }
 
-/* Enquanto um modal/sheet está aberto, o fundo não recebe toque. */
-html[data-modal-aberto] .bottom-nav,
-html[data-modal-aberto] .fab {
-  pointer-events: none;
-}

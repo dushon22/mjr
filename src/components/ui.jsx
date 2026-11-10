@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, X } from 'lucide-react'
 import StatusTag from './StatusTag'
-import { useScrollLock } from '../hooks/useScrollLock'
 
 // Componentes visuais compartilhados por Início, Financeiro e Clientes.
 
@@ -240,42 +239,52 @@ export function SeletorSegmentado({ opcoes, valor, onChange }) {
   )
 }
 
-// Bottom sheet: handle, título, X, fecha ao tocar fora. Corpo rolável e `rodape` fixo.
-// Acompanha o visualViewport para o teclado do iOS não esconder o campo focado.
+// Bottom sheet (mesma abordagem do Meu Mês): backdrop fixo cobrindo a tela, painel com
+// max-height 90dvh, corpo rolável e rodapé fixo. Enquanto aberto, `modal-aberto` no body
+// trava o .wrap (que é quem rola) e esconde a barra inferior e o "+".
 export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
-  useScrollLock()
-  const [viewport, setViewport] = useState(() => lerViewport())
+  const corpoRef = useRef(null)
 
   useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return undefined
-    const atualizar = () => setViewport(lerViewport())
-    vv.addEventListener('resize', atualizar)
-    vv.addEventListener('scroll', atualizar)
-    return () => {
-      vv.removeEventListener('resize', atualizar)
-      vv.removeEventListener('scroll', atualizar)
-    }
+    document.body.classList.add('modal-aberto')
+    return () => document.body.classList.remove('modal-aberto')
   }, [])
 
-  // Ao focar um campo, rola o corpo do sheet até ele (depois de o teclado abrir).
-  function aoFocar(e) {
-    const alvo = e.target
-    if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(alvo.tagName)) return
-    setTimeout(() => alvo.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
-  }
+  // Só deixa o corpo rolar se o conteúdo não couber (evita "elástico" com o teclado do iOS).
+  useEffect(() => {
+    const corpo = corpoRef.current
+    if (!corpo) return undefined
+    function ajustar() {
+      corpo.style.overflowY = 'auto'
+      const ultimo = corpo.lastElementChild
+      const precisa = ultimo ? ultimo.getBoundingClientRect().bottom - corpo.getBoundingClientRect().top + corpo.scrollTop : 0
+      if (Math.max(precisa, 0) <= corpo.clientHeight + 1) {
+        corpo.style.overflowY = 'hidden'
+        corpo.scrollTop = 0
+      }
+    }
+    let timer
+    const aoFocar = () => { timer = setTimeout(ajustar, 300) }
+    ajustar()
+    window.addEventListener('resize', ajustar)
+    window.visualViewport?.addEventListener('resize', ajustar)
+    corpo.addEventListener('focusin', aoFocar)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', ajustar)
+      window.visualViewport?.removeEventListener('resize', ajustar)
+      corpo.removeEventListener('focusin', aoFocar)
+    }
+  })
 
   return createPortal(
     <div
       onClick={onFechar}
       style={{
         position: 'fixed',
-        left: 0,
-        right: 0,
-        top: viewport.top,
-        height: viewport.height,
-        zIndex: 200,
-        touchAction: 'none',
+        inset: 0,
+        zIndex: 1000,
+        overscrollBehavior: 'contain',
         background: 'rgba(0, 0, 0, 0.55)',
         display: 'flex',
         alignItems: 'flex-end',
@@ -286,12 +295,13 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={onSubmit}
-        onFocus={aoFocar}
         style={{
+          position: 'relative',
           width: '100%',
           maxWidth: 520,
           boxSizing: 'border-box',
-          maxHeight: Math.min(viewport.height, window.innerHeight * 0.9),
+          maxHeight: '90dvh',
+          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           background: '#FFFFFF',
@@ -314,12 +324,13 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
           </div>
         </div>
         <div
+          ref={corpoRef}
           style={{
-            flex: 1,
+            flex: '1 1 auto',
             minHeight: 0,
             overflowY: 'auto',
+            overflowX: 'hidden',
             overscrollBehavior: 'contain',
-            touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',
             padding: '16px 20px',
             display: 'flex',
@@ -345,11 +356,6 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
     </div>,
     document.body,
   )
-}
-
-function lerViewport() {
-  const vv = window.visualViewport
-  return vv ? { top: vv.offsetTop, height: vv.height } : { top: 0, height: window.innerHeight }
 }
 
 // Botões padrão do rodapé do sheet.
