@@ -236,7 +236,7 @@ code {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
     padding: 6px;
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(var(--nav-cols, 6), 1fr);
     align-items: center;
     overflow-x: hidden;
   }
@@ -246,7 +246,7 @@ code {
     top: calc(50% - 24px);
     bottom: auto;
     left: 6px;
-    width: calc((100% - 12px) / 6);
+    width: calc((100% - 12px) / var(--nav-cols, 6));
     height: 48px;
     border-radius: 22px;
     background: #25324f;
@@ -312,4 +312,13 @@ code {
     transition: none;
     animation: none;
   }
+}
+
+@keyframes mjr-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes mjr-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

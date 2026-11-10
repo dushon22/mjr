@@ -1,13 +1,30 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { X } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import CampoMoeda from '../components/CampoMoeda'
 import StatusTag from '../components/StatusTag'
 import BotaoFlutuante from '../components/BotaoFlutuante'
 
-const filtros = ['Todos', 'A receber', 'Recebidas', 'A pagar', 'Vencidas']
+const filtros = ['Todos', 'Recebidos', 'A receber', 'Gastos']
+
+// Tipos de lançamento no modal. Mapeiam para o modelo atual da tabela financeiro:
+// recebido = a_receber/pago, a_receber = a_receber/aberto, gasto = a_pagar/pago.
+const TIPOS_LANCAMENTO = [
+  { valor: 'recebido', rotulo: 'Recebido' },
+  { valor: 'a_receber', rotulo: 'A receber' },
+  { valor: 'gasto', rotulo: 'Gasto' },
+]
+
+const VERDE = '#6FAE72'
+const VERMELHO = '#C97A73'
 
 function formatarValor(valor) {
   return `R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function formatarSaldo(valor) {
+  return `${valor < 0 ? '-' : ''}${formatarValor(Math.abs(valor))}`
 }
 
 function formatarData(data) {
@@ -61,17 +78,34 @@ function estaVencida(conta, hojeISO) {
   return conta.status === 'aberto' && conta.vencimento && conta.vencimento.slice(0, 10) < hojeISO
 }
 
+const ehRecebido = (c) => c.tipo === 'a_receber' && c.status === 'pago'
+const ehAReceber = (c) => c.tipo === 'a_receber' && c.status === 'aberto'
+const ehGasto = (c) => c.tipo === 'a_pagar' && c.status === 'pago'
+
+function tipoLancamentoDe(conta) {
+  if (conta.tipo === 'a_receber') return conta.status === 'pago' ? 'recebido' : 'a_receber'
+  return 'gasto'
+}
+
 function estiloLinha(conta, hojeISO) {
-  if (conta.status === 'pago') {
-    if (conta.tipo === 'a_receber') {
-      return { tag: 'Recebida', tom: 'verde', cor: '#4C7A4E', texto: `Recebido em ${formatarData(conta.pago_em)}` }
+  if (ehRecebido(conta)) {
+    return { tag: 'Recebido', tom: 'verde', cor: '#4C7A4E', texto: `Recebido em ${formatarData(conta.pago_em)}`, sinal: '+', corValor: '#1A7F46' }
+  }
+  if (conta.tipo === 'a_pagar') {
+    const paga = conta.status === 'pago'
+    return {
+      tag: paga ? 'Gasto' : 'A pagar',
+      tom: paga ? 'vermelho' : 'ambar',
+      cor: 'var(--mjr-red)',
+      texto: paga ? `Pago em ${formatarData(conta.pago_em)}` : `Vence em ${formatarData(conta.vencimento)}`,
+      sinal: '-',
+      corValor: '#C62E22',
     }
-    return { tag: 'Paga', tom: 'verde', cor: '#6b7280', texto: `Pago em ${formatarData(conta.pago_em)}` }
   }
   if (estaVencida(conta, hojeISO)) {
-    return { tag: 'Vencida', tom: 'vermelho', cor: 'var(--mjr-red)', texto: `Venceu em ${formatarData(conta.vencimento)}` }
+    return { tag: 'Vencida', tom: 'vermelho', cor: 'var(--mjr-red)', texto: `Venceu em ${formatarData(conta.vencimento)}`, sinal: '', corValor: 'var(--mjr-navy)' }
   }
-  return { tag: conta.tipo === 'a_receber' ? 'A receber' : 'A pagar', tom: 'ambar', cor: '#6b7280', texto: `Vence em ${formatarData(conta.vencimento)}` }
+  return { tag: 'A receber', tom: 'ambar', cor: '#6b7280', texto: `Vence em ${formatarData(conta.vencimento)}`, sinal: '', corValor: 'var(--mjr-navy)' }
 }
 
 function Financeiro({ dataVersion, ativa }) {
@@ -80,9 +114,9 @@ function Financeiro({ dataVersion, ativa }) {
 
   const [mostrarForm, setMostrarForm] = useState(false)
   const [descricao, setDescricao] = useState('')
-  const [tipo, setTipo] = useState('a_receber')
+  const [tipoLancamento, setTipoLancamento] = useState('recebido')
   const [valor, setValor] = useState('')
-  const [vencimento, setVencimento] = useState('')
+  const [data, setData] = useState('')
   const [salvando, setSalvando] = useState(false)
 
   const [contaEditando, setContaEditando] = useState(null)
@@ -99,26 +133,27 @@ function Financeiro({ dataVersion, ativa }) {
     setDataReferencia(nova)
   }
 
-  function limparCampos() {
+  function abrirNovo() {
+    setContaEditando(null)
     setDescricao('')
-    setTipo('a_receber')
+    setTipoLancamento('recebido')
     setValor('')
-    setVencimento('')
+    setData(paraISO(new Date()))
+    setMostrarForm(true)
   }
 
   function abrirEdicao(conta) {
     setContaEditando(conta)
     setDescricao(conta.descricao ?? '')
-    setTipo(conta.tipo ?? 'a_receber')
+    setTipoLancamento(tipoLancamentoDe(conta))
     setValor(String(conta.valor ?? ''))
-    setVencimento(conta.vencimento ? conta.vencimento.slice(0, 10) : '')
+    setData(dataRelevanteISO(conta) ?? paraISO(new Date()))
     setMostrarForm(true)
   }
 
   function fecharForm() {
     setMostrarForm(false)
     setContaEditando(null)
-    limparCampos()
   }
 
   async function carregarContas() {
@@ -140,34 +175,26 @@ function Financeiro({ dataVersion, ativa }) {
 
   async function salvar(e) {
     e.preventDefault()
+    if (!Number(valor)) return
     if (contaEditando && !window.confirm('Salvar alterações deste lançamento?')) return
     setSalvando(true)
-    const dados = { descricao, tipo, valor: Number(valor), vencimento }
+    // Meio-dia em UTC-3: funciona se pago_em for date ou timestamptz sem virar o dia.
+    const pagoEm = `${data}T12:00:00-03:00`
+    const dados = {
+      descricao,
+      valor: Number(valor),
+      vencimento: data,
+      tipo: tipoLancamento === 'gasto' ? 'a_pagar' : 'a_receber',
+      status: tipoLancamento === 'a_receber' ? 'aberto' : 'pago',
+      pago_em: tipoLancamento === 'a_receber' ? null : pagoEm,
+    }
     const { error } = contaEditando
       ? await supabase.from('financeiro').update(dados).eq('id', contaEditando.id)
-      : await supabase.from('financeiro').insert({ ...dados, status: 'aberto' })
+      : await supabase.from('financeiro').insert(dados)
     setSalvando(false)
     if (error) {
-      console.error('Erro ao salvar conta:', error)
-      alert('Não foi possível salvar a conta. Tente novamente.')
-      return
-    }
-    fecharForm()
-    await carregarContas()
-  }
-
-  async function alternarStatus() {
-    const novoStatus = contaEditando.status === 'pago' ? 'aberto' : 'pago'
-    if (!window.confirm(`Marcar como ${novoStatus}?`)) return
-    setSalvando(true)
-    const { error } = await supabase
-      .from('financeiro')
-      .update({ status: novoStatus })
-      .eq('id', contaEditando.id)
-    setSalvando(false)
-    if (error) {
-      console.error('Erro ao atualizar status:', error)
-      alert('Não foi possível atualizar o status. Tente novamente.')
+      console.error('Erro ao salvar lançamento:', error)
+      alert('Não foi possível salvar o lançamento. Tente novamente.')
       return
     }
     fecharForm()
@@ -181,162 +208,61 @@ function Financeiro({ dataVersion, ativa }) {
     setSalvando(false)
     if (error) {
       console.error('Erro ao excluir conta:', error)
-      alert('Não foi possível excluir a conta. Tente novamente.')
+      alert('Não foi possível excluir o lançamento. Tente novamente.')
       return
     }
     fecharForm()
     await carregarContas()
   }
 
-  if (mostrarForm) {
-    const campo = {
-      width: '100%',
-      boxSizing: 'border-box',
-      padding: '12px',
-      borderRadius: 10,
-      border: '1px solid #E4E7EC',
-      fontSize: 16,
-      background: '#FFFFFF',
-    }
-    const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
-    return (
-      <div style={{ minHeight: '100dvh', background: '#FFFFFF' }}>
-        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
-          <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
-            {contaEditando ? 'Editar lançamento' : 'Novo lançamento'}
-          </h1>
-        </header>
-        <form
-          onSubmit={salvar}
-          style={{
-            padding: '20px 20px calc(var(--nav-bottom) + 100px) 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}
-        >
-          <label style={rotulo}>
-            Descrição
-            <input type="text" required value={descricao} onChange={(e) => setDescricao(e.target.value)} style={campo} />
-          </label>
-          <label style={rotulo}>
-            Tipo
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={campo}>
-              <option value="a_receber">A receber</option>
-              <option value="a_pagar">A pagar</option>
-            </select>
-          </label>
-          <label style={rotulo}>
-            Valor
-            <CampoMoeda value={valor} onChange={setValor} required style={campo} />
-          </label>
-          <label style={rotulo}>
-            Vencimento
-            <input type="date" required value={vencimento} onChange={(e) => setVencimento(e.target.value)} style={campo} />
-          </label>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              onClick={fecharForm}
-              style={{
-                flex: 1,
-                padding: 12,
-                borderRadius: 10,
-                border: '1px solid #E4E7EC',
-                background: '#FFFFFF',
-                color: '#4A4A4A',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={salvando}
-              style={{
-                flex: 1,
-                padding: 12,
-                borderRadius: 10,
-                border: 'none',
-                background: 'var(--mjr-navy)',
-                color: '#FFFFFF',
-                fontWeight: 600,
-                cursor: 'pointer',
-                opacity: salvando ? 0.6 : 1,
-              }}
-            >
-              {salvando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
-          {contaEditando && (
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                type="button"
-                onClick={alternarStatus}
-                disabled={salvando}
-                style={{
-                  flex: 1,
-                  padding: 12,
-                  borderRadius: 10,
-                  border: '1px solid #171717',
-                  background: '#FFFFFF',
-                  color: '#171717',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                {contaEditando.status === 'pago' ? 'Marcar como aberto' : 'Marcar como pago'}
-              </button>
-              <button
-                type="button"
-                onClick={excluir}
-                disabled={salvando}
-                style={{
-                  flex: 1,
-                  padding: 12,
-                  borderRadius: 10,
-                  border: '1px solid #a32d2d',
-                  background: '#FFFFFF',
-                  color: '#a32d2d',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Excluir
-              </button>
-            </div>
-          )}
-        </form>
-      </div>
-    )
-  }
-
   const hojeISO = paraISO(new Date())
   const intervalo = calcularIntervaloPeriodo(periodoTipo, dataReferencia)
 
-  const totalAReceber = contas
-    .filter((c) => c.tipo === 'a_receber' && c.status === 'aberto' && dentroDoPeriodo(c, intervalo))
-    .reduce((s, c) => s + Number(c.valor), 0)
-  const totalRecebido = contas
-    .filter((c) => c.tipo === 'a_receber' && c.status === 'pago' && dentroDoPeriodo(c, intervalo))
-    .reduce((s, c) => s + Number(c.valor), 0)
-  const totalAPagar = contas
-    .filter((c) => c.tipo === 'a_pagar' && c.status === 'aberto' && dentroDoPeriodo(c, intervalo))
-    .reduce((s, c) => s + Number(c.valor), 0)
+  const somar = (lista) => lista.reduce((s, c) => s + Number(c.valor), 0)
+  const noPeriodo = contas.filter((c) => dentroDoPeriodo(c, intervalo))
+  const totalRecebido = somar(noPeriodo.filter(ehRecebido))
+  const totalAReceber = somar(noPeriodo.filter(ehAReceber))
+  const totalGastos = somar(noPeriodo.filter(ehGasto))
+  const saldoCaixa = totalRecebido - totalGastos
 
-  const contasFiltradas = contas.filter((c) => {
-    if (filtroAtivo === 'Vencidas') return estaVencida(c, hojeISO)
-    if (filtroAtivo === 'A receber' && !(c.tipo === 'a_receber' && c.status === 'aberto')) return false
-    if (filtroAtivo === 'Recebidas' && !(c.tipo === 'a_receber' && c.status === 'pago')) return false
-    if (filtroAtivo === 'A pagar' && c.tipo !== 'a_pagar') return false
-    return dentroDoPeriodo(c, intervalo)
+  const contasFiltradas = noPeriodo.filter((c) => {
+    if (filtroAtivo === 'Recebidos') return ehRecebido(c)
+    if (filtroAtivo === 'A receber') return ehAReceber(c)
+    if (filtroAtivo === 'Gastos') return c.tipo === 'a_pagar'
+    return true
   })
 
   const secoes = [
     { titulo: 'Em aberto', contas: contasFiltradas.filter((c) => c.status === 'aberto') },
-    { titulo: 'Pagas / recebidas', contas: contasFiltradas.filter((c) => c.status === 'pago') },
+    {
+      titulo: 'Pagos / recebidos',
+      // Mais recente primeiro: data de pagamento desc; empate pelo último lançado (created_at desc).
+      contas: contasFiltradas
+        .filter((c) => c.status === 'pago')
+        .sort((a, b) => {
+          const porData = (b.pago_em?.slice(0, 10) ?? '').localeCompare(a.pago_em?.slice(0, 10) ?? '')
+          if (porData !== 0) return porData
+          return (b.created_at ?? '').localeCompare(a.created_at ?? '')
+        }),
+    },
   ]
+
+  const cardsTopo = [
+    { rotulo: 'Recebido', valor: totalRecebido, cor: VERDE },
+    { rotulo: 'A receber', valor: totalAReceber, cor: '#E0B15A' },
+    { rotulo: 'Gastos', valor: totalGastos, cor: VERMELHO },
+  ]
+
+  const campo = {
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: '12px',
+    borderRadius: 10,
+    border: '1px solid #E4E7EC',
+    fontSize: 16,
+    background: '#FFFFFF',
+  }
+  const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
@@ -397,24 +323,31 @@ function Financeiro({ dataVersion, ativa }) {
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 100px', background: '#232323', borderRadius: 12, padding: 14 }}>
-            <div style={{ color: '#CFCFCF', fontSize: 13 }}>A receber</div>
-            <div style={{ color: '#6FAE72', fontSize: 17, fontWeight: 700, marginTop: 4 }}>
-              {formatarValor(totalAReceber)}
+        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+          {cardsTopo.map((card) => (
+            <div key={card.rotulo} style={{ flex: '1 1 0', minWidth: 0, background: '#232323', borderRadius: 12, padding: 12 }}>
+              <div style={{ color: '#CFCFCF', fontSize: 12 }}>{card.rotulo}</div>
+              <div style={{ color: card.cor, fontSize: 15, fontWeight: 700, marginTop: 4, whiteSpace: 'nowrap' }}>
+                {formatarValor(card.valor)}
+              </div>
             </div>
-          </div>
-          <div style={{ flex: '1 1 100px', background: '#232323', borderRadius: 12, padding: 14 }}>
-            <div style={{ color: '#CFCFCF', fontSize: 13 }}>Recebido</div>
-            <div style={{ color: '#6FAE72', fontSize: 17, fontWeight: 700, marginTop: 4 }}>
-              {formatarValor(totalRecebido)}
-            </div>
-          </div>
-          <div style={{ flex: '1 1 100px', background: '#232323', borderRadius: 12, padding: 14 }}>
-            <div style={{ color: '#CFCFCF', fontSize: 13 }}>A pagar</div>
-            <div style={{ color: '#C97A73', fontSize: 17, fontWeight: 700, marginTop: 4 }}>
-              {formatarValor(totalAPagar)}
-            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: 12,
+            background: '#232323',
+            borderRadius: 12,
+            padding: '12px 14px',
+          }}
+        >
+          <div style={{ color: '#CFCFCF', fontSize: 13 }}>Saldo do caixa</div>
+          <div style={{ color: saldoCaixa < 0 ? VERMELHO : '#FFFFFF', fontSize: 17, fontWeight: 700 }}>
+            {formatarSaldo(saldoCaixa)}
           </div>
         </div>
       </header>
@@ -456,7 +389,7 @@ function Financeiro({ dataVersion, ativa }) {
       <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
         {!loading && contas.length === 0 && (
-          <div style={{ color: '#9aa0ad' }}>Nenhuma conta cadastrada ainda.</div>
+          <div style={{ color: '#9aa0ad' }}>Nenhum lançamento cadastrado ainda.</div>
         )}
         {!loading && contas.length > 0 && contasFiltradas.length === 0 && (
           <div style={{ color: '#9aa0ad' }}>Nenhum lançamento para este filtro/período.</div>
@@ -517,7 +450,9 @@ function Financeiro({ dataVersion, ativa }) {
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                        <div style={{ fontWeight: 500, color: 'var(--mjr-navy)' }}>{formatarValor(conta.valor)}</div>
+                        <div style={{ fontWeight: 600, color: estilo.corValor }}>
+                          {estilo.sinal && `${estilo.sinal} `}{formatarValor(conta.valor)}
+                        </div>
                         <StatusTag tom={estilo.tom}>{estilo.tag}</StatusTag>
                       </div>
                     </div>
@@ -530,16 +465,141 @@ function Financeiro({ dataVersion, ativa }) {
         ))}
       </div>
 
-      <BotaoFlutuante
-        ativa={ativa}
-        onClick={() => {
-          setContaEditando(null)
-          limparCampos()
-          setMostrarForm(true)
-        }}
-      >
+      <BotaoFlutuante ativa={ativa && !mostrarForm} onClick={abrirNovo}>
         +
       </BotaoFlutuante>
+
+      {mostrarForm && createPortal(
+        <div
+          onClick={fecharForm}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 200,
+            background: 'rgba(0, 0, 0, 0.55)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            animation: 'mjr-fade 180ms ease-out',
+          }}
+        >
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={salvar}
+            style={{
+              width: '100%',
+              maxWidth: 520,
+              boxSizing: 'border-box',
+              maxHeight: '92dvh',
+              overflowY: 'auto',
+              background: '#FFFFFF',
+              borderRadius: '20px 20px 0 0',
+              padding: '16px 20px calc(env(safe-area-inset-bottom) + 20px)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+              animation: 'mjr-sheet 240ms cubic-bezier(0.3, 0.7, 0.2, 1)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#14202e' }}>
+                {contaEditando ? 'Editar lançamento' : 'Novo lançamento'}
+              </h2>
+              <button
+                type="button"
+                onClick={fecharForm}
+                aria-label="Fechar"
+                style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: '#6b7280', display: 'flex' }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 6, background: '#F1F2F4', padding: 4, borderRadius: 12 }}>
+              {TIPOS_LANCAMENTO.map((t) => {
+                const ativo = tipoLancamento === t.valor
+                const cor = t.valor === 'gasto' ? '#C62E22' : t.valor === 'recebido' ? '#1A7F46' : 'var(--mjr-navy)'
+                return (
+                  <button
+                    key={t.valor}
+                    type="button"
+                    onClick={() => setTipoLancamento(t.valor)}
+                    style={{
+                      flex: 1,
+                      padding: '10px 0',
+                      borderRadius: 9,
+                      border: 'none',
+                      fontSize: 14,
+                      fontWeight: ativo ? 700 : 500,
+                      background: ativo ? '#FFFFFF' : 'transparent',
+                      color: ativo ? cor : '#6b7280',
+                      boxShadow: ativo ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {t.rotulo}
+                  </button>
+                )
+              })}
+            </div>
+
+            <label style={rotulo}>
+              Valor
+              <CampoMoeda
+                value={valor}
+                onChange={setValor}
+                required
+                style={{ ...campo, fontSize: 28, fontWeight: 700, padding: '14px 12px', textAlign: 'center' }}
+              />
+            </label>
+            <label style={rotulo}>
+              Descrição
+              <input type="text" required value={descricao} onChange={(e) => setDescricao(e.target.value)} style={campo} />
+            </label>
+            <label style={rotulo}>
+              {tipoLancamento === 'a_receber' ? 'Data de vencimento' : 'Data'}
+              <input type="date" required value={data} onChange={(e) => setData(e.target.value)} style={campo} />
+            </label>
+
+            <button
+              type="submit"
+              disabled={salvando}
+              style={{
+                padding: 14,
+                borderRadius: 10,
+                border: 'none',
+                background: 'var(--mjr-navy)',
+                color: '#FFFFFF',
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: 'pointer',
+                opacity: salvando ? 0.6 : 1,
+              }}
+            >
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </button>
+            {contaEditando && (
+              <button
+                type="button"
+                onClick={excluir}
+                disabled={salvando}
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  border: '1px solid #a32d2d',
+                  background: '#FFFFFF',
+                  color: '#a32d2d',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Excluir
+              </button>
+            )}
+          </form>
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }

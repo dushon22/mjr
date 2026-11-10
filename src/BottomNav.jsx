@@ -1,7 +1,8 @@
 import { createPortal } from 'react-dom'
 import { Home, Users, Package, Wallet, Calendar, ClipboardList } from 'lucide-react'
+import { abaHabilitada } from './features'
 
-const TABS = [
+const TODAS_TABS = [
   { key: 'inicio', label: 'Início', Icon: Home },
   { key: 'clientes', label: 'Clientes', Icon: Users },
   { key: 'estoque', label: 'Estoque', Icon: Package },
@@ -9,6 +10,7 @@ const TABS = [
   { key: 'agenda', label: 'Agenda', Icon: Calendar },
   { key: 'os', label: 'OS', Icon: ClipboardList },
 ]
+const TABS = TODAS_TABS.filter(({ key }) => abaHabilitada(key))
 
 function BottomNav({ activeTab, setActiveTab }) {
   const indiceAtivo = Math.max(0, TABS.findIndex(({ key }) => key === activeTab))
@@ -16,7 +18,7 @@ function BottomNav({ activeTab, setActiveTab }) {
   // Renderizada direto em document.body, fora dos wrappers das telas, para o
   // position: fixed ficar sempre relativo à viewport.
   return createPortal(
-    <nav className="bottom-nav">
+    <nav className="bottom-nav" style={{ '--nav-cols': TABS.length }}>
       <span
         className="bottom-nav-indicador"
         aria-hidden="true"

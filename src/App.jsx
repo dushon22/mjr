@@ -10,6 +10,7 @@ import Agenda from './screens/Agenda'
 import OrdensServico from './screens/OrdensServico'
 import TiposPelicula from './screens/TiposPelicula'
 import Servicos from './screens/Servicos'
+import { abaHabilitada } from './features'
 import './App.css'
 
 const SCREENS = {
@@ -32,8 +33,14 @@ function App() {
   const [dataVersion, setDataVersion] = useState(0)
 
   function abrirOS(id, modo) {
+    if (!abaHabilitada('os')) return
     setOsAlvo({ id, modo })
     setActiveTab('os')
+  }
+
+  // Ignora navegação para abas desativadas em FEATURES.
+  function irParaAba(aba) {
+    if (abaHabilitada(aba)) setActiveTab(aba)
   }
 
   useEffect(() => {
@@ -84,7 +91,7 @@ function App() {
         return (
           <div key={tab} style={{ display: tab === activeTab ? 'contents' : 'none' }}>
             <Screen
-              setActiveTab={setActiveTab}
+              setActiveTab={irParaAba}
               abrirOS={abrirOS}
               osAlvo={osAlvo}
               limparOsAlvo={() => setOsAlvo(null)}
@@ -94,7 +101,7 @@ function App() {
           </div>
         )
       })}
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomNav activeTab={activeTab} setActiveTab={irParaAba} />
     </>
   )
 }
