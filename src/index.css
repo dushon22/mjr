@@ -4,17 +4,17 @@
   --mjr-bg: #16171d;
   --mjr-header: #171717;
 
-  --text: #4b5563;
-  --text-h: #101828;
-  --bg: #fff;
-  --border: #e4e7ec;
-  --code-bg: #f4f3ec;
-  --accent: var(--mjr-navy);
-  --accent-bg: rgba(20, 48, 77, 0.08);
-  --accent-border: rgba(20, 48, 77, 0.35);
-  --social-bg: rgba(244, 243, 236, 0.5);
+  --text: #f2f3f5;
+  --text-h: #f2f3f5;
+  --bg: #16171d;
+  --border: #2e303a;
+  --code-bg: #1f2028;
+  --accent: #5b84ac;
+  --accent-bg: rgba(91, 132, 172, 0.15);
+  --accent-border: rgba(91, 132, 172, 0.5);
+  --social-bg: rgba(47, 48, 58, 0.5);
   --shadow:
-    rgba(16, 24, 40, 0.06) 0 1px 2px, rgba(16, 24, 40, 0.06) 0 4px 12px -2px;
+    rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
 
   --sans: 'InterVariable', 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -26,8 +26,8 @@
   font: 16px/1.5 var(--sans);
   font-weight: 400;
   letter-spacing: normal;
-  color-scheme: light dark;
-  color: var(--text);
+  color-scheme: dark;
+  color: #f2f3f5;
   background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -35,24 +35,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: var(--mjr-bg);
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #5b84ac;
-    --accent-bg: rgba(91, 132, 172, 0.15);
-    --accent-border: rgba(91, 132, 172, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+html,
+body,
+#root {
+  background: #16171d;
 }
 
 html,
@@ -79,8 +65,9 @@ textarea {
 input,
 select,
 textarea {
-  color: #1a1a1a;
-  -webkit-text-fill-color: #1a1a1a;
+  background: #ffffff;
+  color: #14202e;
+  -webkit-text-fill-color: #14202e;
 }
 
 input,

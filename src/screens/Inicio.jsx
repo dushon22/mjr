@@ -128,7 +128,7 @@ function Inicio({ setActiveTab, dataVersion, ativa }) {
       </header>
 
       <div style={{ padding: 20 }}>
-        <p style={{ margin: '0 0 20px', textAlign: 'center', fontSize: 14, color: '#9aa0ad' }}>
+        <p style={{ margin: '0 0 20px', textAlign: 'center', fontSize: 14, color: '#f2f3f5' }}>
           {dataHoje}
         </p>
 

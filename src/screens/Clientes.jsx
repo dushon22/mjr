@@ -284,6 +284,7 @@ function Clientes({ dataVersion, ativa }) {
               border: 'none',
               outline: 'none',
               color: '#FFFFFF',
+              WebkitTextFillColor: '#FFFFFF',
               fontSize: 16,
             }}
           />
