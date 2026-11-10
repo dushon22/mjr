@@ -4,11 +4,11 @@ import { abaHabilitada } from './features'
 
 const TODAS_TABS = [
   { key: 'inicio', label: 'Início', Icon: Home },
-  { key: 'clientes', label: 'Clientes', Icon: Users },
-  { key: 'estoque', label: 'Estoque', Icon: Package },
   { key: 'financeiro', label: 'Financeiro', Icon: Wallet },
+  { key: 'estoque', label: 'Estoque', Icon: Package },
   { key: 'agenda', label: 'Agenda', Icon: Calendar },
   { key: 'os', label: 'OS', Icon: ClipboardList },
+  { key: 'clientes', label: 'Clientes', Icon: Users },
 ]
 const TABS = TODAS_TABS.filter(({ key }) => abaHabilitada(key))
 
