@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient'
 import CampoTelefone from '../components/CampoTelefone'
 import CampoPlaca from '../components/CampoPlaca'
 import { formatarTelefone, formatarPlaca } from '../utils/mascaras'
-import { CabecalhoTela, CorpoTela, ListaCartoes, LinhaLista, Filtros } from '../components/ui'
+import { CabecalhoTela, CorpoTela, ListaCartoes, LinhaLista, Filtros, BottomSheet, RodapeSheet, SeletorSegmentado, estiloCampo, estiloRotulo } from '../components/ui'
 import BotaoFlutuante from '../components/BotaoFlutuante'
 
 const filtros = ['Todos', 'Automotivo', 'Residencial', 'Comercial']
@@ -116,138 +116,6 @@ function Clientes({ dataVersion, ativa }) {
     await carregarClientes()
   }
 
-  if (mostrarForm) {
-    const campo = {
-      width: '100%',
-      boxSizing: 'border-box',
-      padding: '12px',
-      borderRadius: 10,
-      border: '1px solid #E4E7EC',
-      fontSize: 16,
-      background: '#FFFFFF',
-    }
-    const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
-    return (
-      <div style={{ minHeight: '100dvh', background: '#FFFFFF' }}>
-        <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
-          <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
-            {clienteEditando ? 'Editar cliente' : 'Novo cliente'}
-          </h1>
-        </header>
-        <form
-          onSubmit={salvar}
-          style={{
-            padding: '20px 20px calc(var(--nav-bottom) + 100px) 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-          }}
-        >
-          <label style={rotulo}>
-            Nome
-            <input type="text" required value={nome} onChange={(e) => setNome(e.target.value)} style={campo} />
-          </label>
-          <label style={rotulo}>
-            Telefone
-            <CampoTelefone value={telefone} onChange={setTelefone} style={campo} />
-          </label>
-          <label style={rotulo}>
-            Tipo
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={campo}>
-              <option value="automotivo">Automotivo</option>
-              <option value="residencial">Residencial</option>
-              <option value="comercial">Comercial</option>
-            </select>
-          </label>
-          <label style={rotulo}>
-            {tipo === 'automotivo' ? 'Placa do veículo' : 'Endereço do imóvel'}
-            {tipo === 'automotivo' ? (
-              <CampoPlaca value={veiculoImovel} onChange={setVeiculoImovel} style={campo} />
-            ) : (
-              <input type="text" value={veiculoImovel} onChange={(e) => setVeiculoImovel(e.target.value)} style={campo} />
-            )}
-          </label>
-          {tipo === 'automotivo' && (
-            <label style={rotulo}>
-              Modelo do veículo
-              <input
-                type="text"
-                placeholder="Ex: Corolla 2020"
-                value={veiculoModelo}
-                onChange={(e) => setVeiculoModelo(e.target.value)}
-                style={campo}
-              />
-            </label>
-          )}
-          <label style={rotulo}>
-            Observação
-            <textarea
-              rows={3}
-              placeholder="Opcional"
-              value={observacao}
-              onChange={(e) => setObservacao(e.target.value)}
-              style={{ ...campo, resize: 'vertical' }}
-            />
-          </label>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              onClick={fecharForm}
-              style={{
-                flex: 1,
-                padding: 12,
-                borderRadius: 10,
-                border: '1px solid #E4E7EC',
-                background: '#FFFFFF',
-                color: '#4A4A4A',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Cancelar
-            </button>
-            {clienteEditando && (
-              <button
-                type="button"
-                onClick={excluir}
-                disabled={salvando}
-                style={{
-                  flex: 1,
-                  padding: 12,
-                  borderRadius: 10,
-                  border: '1px solid #a32d2d',
-                  background: '#FFFFFF',
-                  color: '#a32d2d',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Excluir
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={salvando}
-              style={{
-                flex: 1,
-                padding: 12,
-                borderRadius: 10,
-                border: 'none',
-                background: 'var(--mjr-navy)',
-                color: '#FFFFFF',
-                fontWeight: 600,
-                cursor: 'pointer',
-                opacity: salvando ? 0.6 : 1,
-              }}
-            >
-              {salvando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    )
-  }
-
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
       <CabecalhoTela titulo="Clientes">
@@ -323,6 +191,66 @@ function Clientes({ dataVersion, ativa }) {
       >
         +
       </BotaoFlutuante>
+
+      {mostrarForm && (
+        <BottomSheet
+          titulo={clienteEditando ? 'Editar cliente' : 'Novo cliente'}
+          onFechar={fecharForm}
+          onSubmit={salvar}
+          rodape={<RodapeSheet salvando={salvando} onExcluir={clienteEditando ? excluir : undefined} />}
+        >
+          <label style={estiloRotulo}>
+            Nome
+            <input type="text" required value={nome} onChange={(e) => setNome(e.target.value)} style={estiloCampo} />
+          </label>
+          <label style={estiloRotulo}>
+            Telefone
+            <CampoTelefone value={telefone} onChange={setTelefone} style={estiloCampo} />
+          </label>
+          <div style={estiloRotulo}>
+            Categoria
+            <SeletorSegmentado
+              opcoes={[
+                { valor: 'automotivo', rotulo: 'Automotivo' },
+                { valor: 'residencial', rotulo: 'Residencial' },
+                { valor: 'comercial', rotulo: 'Comercial' },
+              ]}
+              valor={tipo}
+              onChange={setTipo}
+            />
+          </div>
+          <label style={estiloRotulo}>
+            {tipo === 'automotivo' ? 'Placa do veículo' : 'Endereço do imóvel'}
+            {tipo === 'automotivo' ? (
+              <CampoPlaca value={veiculoImovel} onChange={setVeiculoImovel} style={estiloCampo} />
+            ) : (
+              <input type="text" value={veiculoImovel} onChange={(e) => setVeiculoImovel(e.target.value)} style={estiloCampo} />
+            )}
+          </label>
+          {tipo === 'automotivo' && (
+            <label style={estiloRotulo}>
+              Modelo do veículo
+              <input
+                type="text"
+                placeholder="Ex: Corolla 2020"
+                value={veiculoModelo}
+                onChange={(e) => setVeiculoModelo(e.target.value)}
+                style={estiloCampo}
+              />
+            </label>
+          )}
+          <label style={estiloRotulo}>
+            Observação
+            <textarea
+              rows={3}
+              placeholder="Opcional"
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              style={{ ...estiloCampo, resize: 'vertical' }}
+            />
+          </label>
+        </BottomSheet>
+      )}
     </div>
   )
 }

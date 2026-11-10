@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import CampoMoeda from '../components/CampoMoeda'
 import BotaoFlutuante from '../components/BotaoFlutuante'
-import { CabecalhoTela, CorpoTela, TituloSecao, ListaCartoes, LinhaLista, Filtros } from '../components/ui'
+import { CabecalhoTela, CorpoTela, TituloSecao, ListaCartoes, LinhaLista, Filtros, BottomSheet, RodapeSheet, SeletorSegmentado, estiloCampo, estiloRotulo } from '../components/ui'
 
 const filtros = ['Todos', 'Recebidos', 'A receber', 'Gastos']
 
@@ -262,16 +260,6 @@ function Financeiro({ dataVersion, ativa, alvoFinanceiro }) {
     { rotulo: 'Gastos', valor: totalGastos, cor: totalGastos > 0 ? '#ff9b90' : '#b8bdc9' },
   ]
 
-  const campo = {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '12px',
-    borderRadius: 10,
-    border: '1px solid #E4E7EC',
-    fontSize: 16,
-    background: '#FFFFFF',
-  }
-  const rotulo = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: '#4A4A4A' }
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
@@ -401,136 +389,40 @@ function Financeiro({ dataVersion, ativa, alvoFinanceiro }) {
         +
       </BotaoFlutuante>
 
-      {mostrarForm && createPortal(
-        <div
-          onClick={fecharForm}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 200,
-            background: 'rgba(0, 0, 0, 0.55)',
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-            animation: 'mjr-fade 180ms ease-out',
-          }}
+      {mostrarForm && (
+        <BottomSheet
+          titulo={contaEditando ? 'Editar lançamento' : 'Novo lançamento'}
+          onFechar={fecharForm}
+          onSubmit={salvar}
+          rodape={<RodapeSheet salvando={salvando} onExcluir={contaEditando ? excluir : undefined} />}
         >
-          <form
-            onClick={(e) => e.stopPropagation()}
-            onSubmit={salvar}
-            style={{
-              width: '100%',
-              maxWidth: 520,
-              boxSizing: 'border-box',
-              maxHeight: '92dvh',
-              overflowY: 'auto',
-              background: '#FFFFFF',
-              borderRadius: '20px 20px 0 0',
-              padding: '16px 20px calc(env(safe-area-inset-bottom) + 20px)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-              animation: 'mjr-sheet 240ms cubic-bezier(0.3, 0.7, 0.2, 1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#14202e' }}>
-                {contaEditando ? 'Editar lançamento' : 'Novo lançamento'}
-              </h2>
-              <button
-                type="button"
-                onClick={fecharForm}
-                aria-label="Fechar"
-                style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: '#6b7280', display: 'flex' }}
-              >
-                <X size={22} />
-              </button>
-            </div>
+          <SeletorSegmentado
+            opcoes={TIPOS_LANCAMENTO.map((t) => ({
+              ...t,
+              cor: t.valor === 'gasto' ? '#C62E22' : t.valor === 'recebido' ? '#1A7F46' : 'var(--mjr-navy)',
+            }))}
+            valor={tipoLancamento}
+            onChange={setTipoLancamento}
+          />
 
-            <div style={{ display: 'flex', gap: 6, background: '#F1F2F4', padding: 4, borderRadius: 12 }}>
-              {TIPOS_LANCAMENTO.map((t) => {
-                const ativo = tipoLancamento === t.valor
-                const cor = t.valor === 'gasto' ? '#C62E22' : t.valor === 'recebido' ? '#1A7F46' : 'var(--mjr-navy)'
-                return (
-                  <button
-                    key={t.valor}
-                    type="button"
-                    onClick={() => setTipoLancamento(t.valor)}
-                    style={{
-                      flex: 1,
-                      padding: '10px 0',
-                      borderRadius: 9,
-                      border: 'none',
-                      fontSize: 14,
-                      fontWeight: ativo ? 700 : 500,
-                      background: ativo ? '#FFFFFF' : 'transparent',
-                      color: ativo ? cor : '#6b7280',
-                      boxShadow: ativo ? '0 1px 3px rgba(0,0,0,0.12)' : 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {t.rotulo}
-                  </button>
-                )
-              })}
-            </div>
-
-            <label style={rotulo}>
-              Valor
-              <CampoMoeda
-                value={valor}
-                onChange={setValor}
-                required
-                style={{ ...campo, fontSize: 28, fontWeight: 700, padding: '14px 12px', textAlign: 'center' }}
-              />
-            </label>
-            <label style={rotulo}>
-              Descrição
-              <input type="text" required value={descricao} onChange={(e) => setDescricao(e.target.value)} style={campo} />
-            </label>
-            <label style={rotulo}>
-              {tipoLancamento === 'a_receber' ? 'Data de vencimento' : 'Data'}
-              <input type="date" required value={data} onChange={(e) => setData(e.target.value)} style={campo} />
-            </label>
-
-            <button
-              type="submit"
-              disabled={salvando}
-              style={{
-                padding: 14,
-                borderRadius: 10,
-                border: 'none',
-                background: 'var(--mjr-navy)',
-                color: '#FFFFFF',
-                fontSize: 16,
-                fontWeight: 600,
-                cursor: 'pointer',
-                opacity: salvando ? 0.6 : 1,
-              }}
-            >
-              {salvando ? 'Salvando...' : 'Salvar'}
-            </button>
-            {contaEditando && (
-              <button
-                type="button"
-                onClick={excluir}
-                disabled={salvando}
-                style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  border: '1px solid #a32d2d',
-                  background: '#FFFFFF',
-                  color: '#a32d2d',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Excluir
-              </button>
-            )}
-          </form>
-        </div>,
-        document.body,
+          <label style={estiloRotulo}>
+            Valor
+            <CampoMoeda
+              value={valor}
+              onChange={setValor}
+              required
+              style={{ ...estiloCampo, fontSize: 28, fontWeight: 700, padding: '14px 12px', textAlign: 'center' }}
+            />
+          </label>
+          <label style={estiloRotulo}>
+            Descrição
+            <input type="text" required value={descricao} onChange={(e) => setDescricao(e.target.value)} style={estiloCampo} />
+          </label>
+          <label style={estiloRotulo}>
+            {tipoLancamento === 'a_receber' ? 'Data de vencimento' : 'Data'}
+            <input type="date" required value={data} onChange={(e) => setData(e.target.value)} style={estiloCampo} />
+          </label>
+        </BottomSheet>
       )}
     </div>
   )
