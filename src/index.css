@@ -309,3 +309,11 @@ code {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+.inicio-cartao {
+  transition: transform 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.inicio-cartao:active {
+  transform: scale(0.98);
+}
