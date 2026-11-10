@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, X } from 'lucide-react'
 import StatusTag from './StatusTag'
+import { useSheetDrag } from '../hooks/useSheetDrag'
 
 // Componentes visuais compartilhados por Início, Financeiro e Clientes.
 
@@ -244,6 +245,12 @@ export function SeletorSegmentado({ opcoes, valor, onChange }) {
 // trava o .wrap (que é quem rola) e esconde a barra inferior e o "+".
 export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
   const corpoRef = useRef(null)
+  const overlayRef = useRef(null)
+  const sheetRef = useRef(null)
+  // O hook registra os listeners uma vez; esta ref mantém o onFechar mais recente.
+  const fecharRef = useRef(onFechar)
+  fecharRef.current = onFechar
+  useSheetDrag({ overlayRef, sheetRef, corpoRef, onFechar: () => fecharRef.current() })
 
   useEffect(() => {
     document.body.classList.add('modal-aberto')
@@ -279,13 +286,14 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
 
   return createPortal(
     <div
+      ref={overlayRef}
       onClick={onFechar}
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 1000,
         overscrollBehavior: 'contain',
-        background: 'rgba(0, 0, 0, 0.55)',
+        background: 'rgba(0, 0, 0, calc(0.55 * var(--bd, 1)))',
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
@@ -293,6 +301,7 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
       }}
     >
       <form
+        ref={sheetRef}
         onClick={(e) => e.stopPropagation()}
         onSubmit={onSubmit}
         style={{
@@ -309,7 +318,7 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
           animation: 'mjr-sheet 240ms cubic-bezier(0.3, 0.7, 0.2, 1)',
         }}
       >
-        <div style={{ padding: '8px 20px 0', flexShrink: 0 }}>
+        <div data-arrasto style={{ padding: '8px 20px 0', flexShrink: 0, touchAction: 'none', cursor: 'grab' }}>
           <div style={{ width: 40, height: 4, borderRadius: 2, background: '#D0D5DD', margin: '0 auto 8px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#14202e' }}>{titulo}</h2>
