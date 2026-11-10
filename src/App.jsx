@@ -93,7 +93,6 @@ function App() {
 
   return (
     <>
-      <div className="wrap">
       {visitados.map((tab) => {
         const Screen = SCREENS[tab]
         return (
@@ -111,7 +110,6 @@ function App() {
           </div>
         )
       })}
-      </div>
       <BottomNav activeTab={activeTab} setActiveTab={irParaAba} />
     </>
   )

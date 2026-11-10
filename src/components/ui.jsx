@@ -242,7 +242,7 @@ export function SeletorSegmentado({ opcoes, valor, onChange }) {
 
 // Bottom sheet (mesma abordagem do Meu Mês): backdrop fixo cobrindo a tela, painel com
 // max-height 90dvh, corpo rolável e rodapé fixo. Enquanto aberto, `modal-aberto` no body
-// trava o .wrap (que é quem rola) e esconde a barra inferior e o "+".
+// congela a página atrás e esconde a barra inferior e o "+".
 export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
   const corpoRef = useRef(null)
   const overlayRef = useRef(null)
@@ -252,9 +252,17 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
   fecharRef.current = onFechar
   useSheetDrag({ overlayRef, sheetRef, corpoRef, onFechar: () => fecharRef.current() })
 
+  // Só enquanto o sheet existe: marca o body e congela a página atrás (posição restaurada ao fechar).
   useEffect(() => {
+    const y = window.scrollY
+    const estilo = document.body.style
     document.body.classList.add('modal-aberto')
-    return () => document.body.classList.remove('modal-aberto')
+    Object.assign(estilo, { position: 'fixed', top: `-${y}px`, left: '0', right: '0', width: '100%' })
+    return () => {
+      document.body.classList.remove('modal-aberto')
+      Object.assign(estilo, { position: '', top: '', left: '', right: '', width: '' })
+      window.scrollTo(0, y)
+    }
   }, [])
 
   // Só deixa o corpo rolar se o conteúdo não couber (evita "elástico" com o teclado do iOS).
