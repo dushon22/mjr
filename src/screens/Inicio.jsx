@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ArrowDownLeft, ArrowUpRight, Clock, AlertTriangle, AlertCircle } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Clock, AlertTriangle } from 'lucide-react'
+import { CabecalhoTela, CorpoTela, TituloSecao, ListaCartoes, LinhaLista, AreaToque, estiloCartao } from '../components/ui'
 import { supabase } from '../supabaseClient'
 import { mesAtualSP, dataLocalSP, mesDeslocado, nomeMes, chaveMes } from '../utils/periodo'
 
@@ -30,7 +31,7 @@ const ehRecebido = (c) => c.tipo === 'a_receber' && c.status === 'pago'
 const ehAReceber = (c) => c.tipo === 'a_receber' && c.status === 'aberto'
 const ehGasto = (c) => c.tipo === 'a_pagar' && c.status === 'pago'
 
-function Inicio({ setActiveTab, dataVersion, ativa }) {
+function Inicio({ abrirFinanceiro, dataVersion, ativa }) {
   const [contas, setContas] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -76,12 +77,13 @@ function Inicio({ setActiveTab, dataVersion, ativa }) {
     .filter((c) => ehAReceber(c) && c.vencimento && c.vencimento.slice(0, 10) >= hoje && c.vencimento.slice(0, 10) <= limiteBreve)
     .sort(porVencimento)
 
-  const cartao = { background: '#FFFFFF', border: '1px solid #E4E7EC', borderRadius: 12, padding: 16 }
-  const tituloSecao = { margin: 0, fontSize: 16, fontWeight: 600, color: '#f2f3f5' }
-  const linkVer = { color: '#7db2ff', fontSize: 13, fontWeight: 600, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }
-  const cabecaSecao = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }
-
   const dataHoje = maiuscula(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
+
+  // Atalhos para o Financeiro (já no filtro/mês correspondente).
+  const primeiroDia = (mes) => `${chaveMes(mes)}-01`
+  const abrir = (filtro, data) => () => abrirFinanceiro({ filtro, data })
+  const abrirTudo = abrir('Todos', primeiroDia(mesAtual))
+  const abrirVencidas = abrir('A receber', vencidas[0]?.vencimento.slice(0, 10) ?? primeiroDia(mesAtual))
 
   function circuloIcone(Icone, fundo, cor) {
     return (
@@ -93,67 +95,70 @@ function Inicio({ setActiveTab, dataVersion, ativa }) {
     )
   }
 
-  function renderContas(lista, vazio, Icone, fundoIcone, corIcone, prefixo, corApoio) {
+  function renderContas(lista, vazio, cor, tag, prefixo) {
     if (lista.length === 0) return <p style={{ margin: 0, color: '#9aa0ad', textAlign: 'left' }}>{vazio}</p>
-    return lista.map((c) => (
-      <div
-        key={c.id}
-        className="inicio-cartao"
-        style={{ ...cartao, display: 'flex', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 }}
-      >
-        {circuloIcone(Icone, fundoIcone, corIcone)}
-        <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-          <div style={{ fontSize: 15, fontWeight: 500, color: '#14202e' }}>
-            {c.clientes?.nome || c.descricao}
-          </div>
-          <div style={{ fontSize: 12, color: corApoio }}>
-            {prefixo} {formatarDataCurta(c.vencimento)}
-          </div>
-        </div>
-        <div style={{ flexShrink: 0, fontSize: 15, fontWeight: 500, color: '#14304d' }}>
-          {formatarReais(Number(c.valor))}
-        </div>
-      </div>
-    ))
+    return (
+      <ListaCartoes>
+        {lista.map((c) => (
+          <LinhaLista
+            key={c.id}
+            cor={cor}
+            nome={c.clientes?.nome || c.descricao}
+            apoio={[c.clientes?.nome && c.descricao ? c.descricao : null, `${prefixo} ${formatarDataCurta(c.vencimento)}`]}
+            direita={<div style={{ fontWeight: 600, color: 'var(--mjr-navy)' }}>{formatarReais(Number(c.valor))}</div>}
+            etiqueta={tag}
+            onClick={abrir('A receber', c.vencimento.slice(0, 10))}
+          />
+        ))}
+      </ListaCartoes>
+    )
   }
 
   if (loading) {
     return <div style={{ padding: 20, color: '#9aa0ad' }}>Carregando...</div>
   }
 
-  const cartaoResumo = { ...cartao, flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, padding: 12, textAlign: 'left' }
-  const cartaoCompacto = { ...cartao, textAlign: 'center', padding: 14 }
+  const cartaoResumo = { ...estiloCartao, flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, paddingRight: 28 }
+  const cartaoCompacto = { ...estiloCartao, textAlign: 'center', paddingBottom: 22 }
+
+  const titulo = (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+      <img
+        src="/icon-192.png"
+        alt=""
+        width={46}
+        height={46}
+        style={{ width: 46, height: 46, borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', display: 'block' }}
+      />
+      <span>
+        MJR <span style={{ color: '#E03A2B' }}>Film</span>
+      </span>
+    </span>
+  )
 
   return (
     <div style={{ paddingBottom: 'calc(var(--nav-bottom) + 100px)' }}>
-      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px 0', paddingTop: 'calc(env(safe-area-inset-top) + 24px)', textAlign: 'left' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <img
-            src="/icon-192.png"
-            alt=""
-            width={46}
-            height={46}
-            style={{ width: 46, height: 46, borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', display: 'block' }}
-          />
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>
-              <span style={{ color: '#FFFFFF' }}>MJR</span>{' '}
-              <span style={{ color: '#E03A2B' }}>Film</span>
-            </h1>
-            <p style={{ margin: '2px 0 0', color: '#d6d8de', fontSize: 12 }}>{dataHoje}</p>
-          </div>
-        </div>
-        <div style={{ width: 48, height: 2, background: '#E03A2B', marginTop: 16 }} />
-      </header>
+      <CabecalhoTela titulo={titulo}>
+        <p style={{ margin: '8px 0 0', color: '#d6d8de', fontSize: 12 }}>{dataHoje}</p>
+        <div style={{ width: 48, height: 2, background: '#E03A2B', margin: '16px auto 0' }} />
+      </CabecalhoTela>
 
-      <div style={{ padding: 20, textAlign: 'left' }}>
-        <section
-          className="inicio-cartao"
-          style={{ background: '#14304d', border: '1px solid #2a4f7f', borderRadius: 18, padding: 16, marginBottom: 12 }}
+      <CorpoTela style={{ paddingTop: 4 }}>
+        <AreaToque
+          onClick={abrirTudo}
+          label="Abrir financeiro do mês"
+          corChevron="#b9c8dc"
+          style={{ background: '#14304d', border: '1px solid #2a4f7f', borderRadius: 16, padding: 14, paddingBottom: 26, marginBottom: 10, textAlign: 'left' }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontSize: 13, color: '#b9c8dc' }}>Saldo do caixa · {maiuscula(nomeMes(mesAtual))}</div>
-            <button onClick={() => setActiveTab('financeiro')} style={linkVer}>Ver financeiro</button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); abrirTudo() }}
+              style={{ color: '#7db2ff', fontSize: 13, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              Ver financeiro
+            </button>
           </div>
           <div style={{ fontSize: 30, fontWeight: 500, color: saldo < 0 ? '#ff9b90' : '#FFFFFF', margin: '4px 0 14px' }}>
             {formatarReais(saldo)}
@@ -172,17 +177,17 @@ function Inicio({ setActiveTab, dataVersion, ativa }) {
               <div style={{ fontSize: 15, fontWeight: 500, color: '#ff9b90', marginTop: 2 }}>{formatarReais(gastos)}</div>
             </div>
           </div>
-        </section>
+        </AreaToque>
 
-        <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
-          <div className="inicio-cartao" style={cartaoResumo}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <AreaToque onClick={abrir('A receber', primeiroDia(mesAtual))} label="Abrir contas a receber" style={cartaoResumo}>
             {circuloIcone(Clock, '#fdf1d6', '#9a6a00')}
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 18, fontWeight: 500, color: '#14304d' }}>{formatarReais(aReceber)}</div>
               <div style={{ fontSize: 12, color: '#6b7280' }}>A receber</div>
             </div>
-          </div>
-          <div className="inicio-cartao" style={cartaoResumo}>
+          </AreaToque>
+          <AreaToque onClick={abrirVencidas} label="Abrir contas vencidas" style={cartaoResumo}>
             {circuloIcone(AlertTriangle, '#fbe4e2', '#C62E22')}
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 18, fontWeight: 500, color: vencidas.length > 0 ? '#C62E22' : '#14304d' }}>
@@ -190,42 +195,33 @@ function Inicio({ setActiveTab, dataVersion, ativa }) {
               </div>
               <div style={{ fontSize: 12, color: '#6b7280' }}>Em atraso</div>
             </div>
-          </div>
+          </AreaToque>
         </div>
 
-        <section style={{ marginBottom: 28 }}>
-          <div style={cabecaSecao}>
-            <h3 style={tituloSecao}>Vencidas</h3>
-            <button onClick={() => setActiveTab('financeiro')} style={linkVer}>Ver financeiro</button>
-          </div>
-          {renderContas(vencidas, 'Nenhuma conta vencida.', AlertCircle, '#fbe4e2', '#C62E22', 'Venceu em', '#C62E22')}
-        </section>
-
-        <section style={{ marginBottom: 28 }}>
-          <div style={cabecaSecao}>
-            <h3 style={tituloSecao}>Vence em breve</h3>
-            <button onClick={() => setActiveTab('financeiro')} style={linkVer}>Ver financeiro</button>
-          </div>
-          {renderContas(venceEmBreve, `Nada vence nos próximos ${DIAS_VENCE_EM_BREVE} dias.`, Clock, '#fdf1d6', '#9a6a00', 'Vence em', '#6b7280')}
+        <section>
+          <TituloSecao onVer={abrirVencidas}>Vencidas</TituloSecao>
+          {renderContas(vencidas, 'Nenhuma conta vencida.', 'var(--mjr-red)', { tom: 'vermelho', texto: 'Vencida' }, 'Venceu em')}
         </section>
 
         <section>
-          <div style={cabecaSecao}>
-            <h3 style={tituloSecao}>Mês anterior · {maiuscula(nomeMes(mesAnterior))}</h3>
-            <button onClick={() => setActiveTab('financeiro')} style={linkVer}>Ver financeiro</button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="inicio-cartao" style={cartaoCompacto}>
+          <TituloSecao onVer={abrir('A receber', primeiroDia(mesAtual))}>Vence em breve</TituloSecao>
+          {renderContas(venceEmBreve, `Nada vence nos próximos ${DIAS_VENCE_EM_BREVE} dias.`, '#6b7280', { tom: 'ambar', texto: 'A receber' }, 'Vence em')}
+        </section>
+
+        <section>
+          <TituloSecao onVer={abrir('Todos', primeiroDia(mesAnterior))}>Mês anterior · {maiuscula(nomeMes(mesAnterior))}</TituloSecao>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <AreaToque onClick={abrir('Recebidos', primeiroDia(mesAnterior))} label="Abrir recebidos do mês anterior" style={cartaoCompacto}>
               <div style={{ fontSize: 18, fontWeight: 500, color: '#1A7F46' }}>{formatarReais(recebidoAnterior)}</div>
               <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Recebido</div>
-            </div>
-            <div className="inicio-cartao" style={cartaoCompacto}>
+            </AreaToque>
+            <AreaToque onClick={abrir('Gastos', primeiroDia(mesAnterior))} label="Abrir gastos do mês anterior" style={cartaoCompacto}>
               <div style={{ fontSize: 18, fontWeight: 500, color: '#C62E22' }}>{formatarReais(gastosAnterior)}</div>
               <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Gastos</div>
-            </div>
+            </AreaToque>
           </div>
         </section>
-      </div>
+      </CorpoTela>
     </div>
   )
 }

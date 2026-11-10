@@ -28,6 +28,8 @@ function App() {
   const [session, setSession] = useState(null)
   const [activeTab, setActiveTab] = useState('inicio')
   const [osAlvo, setOsAlvo] = useState(null) // { id, modo: 'fechar' | 'detalhes' }
+  // Atalho do Início para o Financeiro: { filtro, data: 'YYYY-MM-DD' }; objeto novo a cada toque.
+  const [alvoFinanceiro, setAlvoFinanceiro] = useState(null)
   const [visitados, setVisitados] = useState(['inicio'])
   // Incrementado após escritas no banco e ao voltar ao primeiro plano; a tela ativa busca de novo.
   const [dataVersion, setDataVersion] = useState(0)
@@ -36,6 +38,11 @@ function App() {
     if (!abaHabilitada('os')) return
     setOsAlvo({ id, modo })
     setActiveTab('os')
+  }
+
+  function abrirFinanceiro(alvo) {
+    setAlvoFinanceiro(alvo ? { ...alvo } : null)
+    setActiveTab('financeiro')
   }
 
   // Ignora navegação para abas desativadas em FEATURES.
@@ -93,6 +100,8 @@ function App() {
             <Screen
               setActiveTab={irParaAba}
               abrirOS={abrirOS}
+              abrirFinanceiro={abrirFinanceiro}
+              alvoFinanceiro={alvoFinanceiro}
               osAlvo={osAlvo}
               limparOsAlvo={() => setOsAlvo(null)}
               dataVersion={dataVersion}

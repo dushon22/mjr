@@ -310,10 +310,14 @@ code {
   to { opacity: 1; }
 }
 
-.inicio-cartao {
+.cartao-toque {
   transition: transform 150ms ease;
   -webkit-tap-highlight-color: transparent;
 }
-.inicio-cartao:active {
+.cartao-toque:active {
   transform: scale(0.98);
+}
+.cartao-toque:focus-visible {
+  outline: 2px solid #7db2ff;
+  outline-offset: 2px;
 }

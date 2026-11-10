@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 import CampoMoeda from '../components/CampoMoeda'
-import StatusTag from '../components/StatusTag'
 import BotaoFlutuante from '../components/BotaoFlutuante'
+import { CabecalhoTela, CorpoTela, TituloSecao, ListaCartoes, LinhaLista, Filtros } from '../components/ui'
 
 const filtros = ['Todos', 'Recebidos', 'A receber', 'Gastos']
 
@@ -108,7 +108,7 @@ function estiloLinha(conta, hojeISO) {
   return { tag: 'A receber', tom: 'ambar', cor: '#6b7280', texto: `Vence em ${formatarData(conta.vencimento)}`, sinal: '', corValor: 'var(--mjr-navy)' }
 }
 
-function Financeiro({ dataVersion, ativa }) {
+function Financeiro({ dataVersion, ativa, alvoFinanceiro }) {
   const [contas, setContas] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -124,6 +124,17 @@ function Financeiro({ dataVersion, ativa }) {
   const [periodoTipo, setPeriodoTipo] = useState('mes')
   const [dataReferencia, setDataReferencia] = useState(() => new Date())
   const [filtroAtivo, setFiltroAtivo] = useState('Todos')
+
+  // Atalhos vindos do Início: abre já no filtro e no mês pedidos.
+  useEffect(() => {
+    if (!alvoFinanceiro) return
+    if (alvoFinanceiro.filtro) setFiltroAtivo(alvoFinanceiro.filtro)
+    if (alvoFinanceiro.data) {
+      const [ano, mes] = alvoFinanceiro.data.split('-').map(Number)
+      setPeriodoTipo('mes')
+      setDataReferencia(new Date(ano, mes - 1, 1))
+    }
+  }, [alvoFinanceiro])
 
   function mudarPeriodo(delta) {
     const nova = new Date(dataReferencia)
@@ -266,11 +277,7 @@ function Financeiro({ dataVersion, ativa }) {
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
-        <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
-          Financeiro
-        </h1>
-
+      <CabecalhoTela titulo="Financeiro">
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           {[
             { valor: 'dia', rotulo: 'Dia' },
@@ -350,43 +357,11 @@ function Financeiro({ dataVersion, ativa }) {
             {formatarSaldo(saldoCaixa)}
           </div>
         </div>
-      </header>
+      </CabecalhoTela>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          padding: '16px 20px',
-          overflowX: 'auto',
-        }}
-      >
-        {filtros.map((filtro) => {
-          const ativo = filtro === filtroAtivo
-          return (
-            <button
-              key={filtro}
-              type="button"
-              onClick={() => setFiltroAtivo(filtro)}
-              style={{
-                flexShrink: 0,
-                height: 36,
-                padding: '0 14px',
-                borderRadius: 999,
-                fontSize: 13,
-                fontWeight: ativo ? 600 : 400,
-                background: ativo ? 'var(--mjr-navy)' : '#FFFFFF',
-                color: ativo ? '#FFFFFF' : 'var(--mjr-navy)',
-                border: ativo ? '1px solid #2a4f7f' : '1px solid #E2E0DC',
-                cursor: 'pointer',
-              }}
-            >
-              {filtro}
-            </button>
-          )
-        })}
-      </div>
+      <Filtros opcoes={filtros} ativo={filtroAtivo} onChange={setFiltroAtivo} />
 
-      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <CorpoTela>
         {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
         {!loading && contas.length === 0 && (
           <div style={{ color: '#9aa0ad' }}>Nenhum lançamento cadastrado ainda.</div>
@@ -397,73 +372,31 @@ function Financeiro({ dataVersion, ativa }) {
         {!loading && contasFiltradas.length > 0 && secoes.map((secao) => (
           secao.contas.length === 0 ? null : (
           <section key={secao.titulo}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#9aa0ad',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-                marginBottom: 10,
-                textAlign: 'left',
-              }}
-            >
-              {secao.titulo}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <TituloSecao>{secao.titulo}</TituloSecao>
+            <ListaCartoes>
               {secao.contas.map((conta, index) => {
                 const estilo = estiloLinha(conta, hojeISO)
                 return (
-                  <div
+                  <LinhaLista
                     key={conta.id ?? index}
                     onClick={() => abrirEdicao(conta)}
-                    style={{
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'stretch',
-                      background: '#FFFFFF',
-                      border: '1px solid #E4E7EC',
-                      borderRadius: 12,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div style={{ width: 4, background: estilo.cor }} />
-                    <div
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: 12,
-                      }}
-                    >
-                      <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontSize: 16, fontWeight: 500, color: '#14202e', textAlign: 'left' }}>
-                          {conta.clientes?.nome || conta.descricao}
-                        </div>
-                        {conta.clientes?.nome && conta.descricao && (
-                          <div style={{ fontSize: 13, color: '#6b7280', textAlign: 'left' }}>{conta.descricao}</div>
-                        )}
-                        <div style={{ fontSize: 13, color: '#6b7280', textAlign: 'left' }}>
-                          {estilo.texto}
-                        </div>
+                    cor={estilo.cor}
+                    nome={conta.clientes?.nome || conta.descricao}
+                    apoio={[conta.clientes?.nome && conta.descricao ? conta.descricao : null, estilo.texto]}
+                    direita={
+                      <div style={{ fontWeight: 600, color: estilo.corValor }}>
+                        {estilo.sinal && `${estilo.sinal} `}{formatarValor(conta.valor)}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                        <div style={{ fontWeight: 600, color: estilo.corValor }}>
-                          {estilo.sinal && `${estilo.sinal} `}{formatarValor(conta.valor)}
-                        </div>
-                        <StatusTag tom={estilo.tom}>{estilo.tag}</StatusTag>
-                      </div>
-                    </div>
-                  </div>
+                    }
+                    etiqueta={{ tom: estilo.tom, texto: estilo.tag }}
+                  />
                 )
               })}
-            </div>
+            </ListaCartoes>
           </section>
           )
         ))}
-      </div>
+      </CorpoTela>
 
       <BotaoFlutuante ativa={ativa && !mostrarForm} onClick={abrirNovo}>
         +

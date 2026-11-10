@@ -3,19 +3,10 @@ import { supabase } from '../supabaseClient'
 import CampoTelefone from '../components/CampoTelefone'
 import CampoPlaca from '../components/CampoPlaca'
 import { formatarTelefone, formatarPlaca } from '../utils/mascaras'
-import StatusTag from '../components/StatusTag'
+import { CabecalhoTela, CorpoTela, ListaCartoes, LinhaLista, Filtros } from '../components/ui'
 import BotaoFlutuante from '../components/BotaoFlutuante'
 
 const filtros = ['Todos', 'Automotivo', 'Residencial', 'Comercial']
-
-function iniciais(nome) {
-  return nome
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((palavra) => palavra[0].toUpperCase())
-    .join('')
-}
 
 function Clientes({ dataVersion, ativa }) {
   const [clientes, setClientes] = useState([])
@@ -259,10 +250,7 @@ function Clientes({ dataVersion, ativa }) {
 
   return (
     <div style={{ paddingBottom: 'calc(160px + env(safe-area-inset-bottom))' }}>
-      <header style={{ background: 'var(--mjr-bg)', padding: '24px 20px', paddingTop: 'calc(env(safe-area-inset-top) + 24px)' }}>
-        <h1 style={{ margin: 0, color: '#FFFFFF', fontSize: 22, fontWeight: 700 }}>
-          Clientes
-        </h1>
+      <CabecalhoTela titulo="Clientes">
         <div
           style={{
             display: 'flex',
@@ -289,99 +277,41 @@ function Clientes({ dataVersion, ativa }) {
             }}
           />
         </div>
-      </header>
+      </CabecalhoTela>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          padding: '16px 20px',
-          overflowX: 'auto',
-        }}
-      >
-        {filtros.map((filtro, index) => {
-          const ativo = index === 0
-          return (
-            <button
-              key={filtro}
-              type="button"
-              style={{
-                flexShrink: 0,
-                height: 36,
-                padding: '0 14px',
-                borderRadius: 999,
-                fontSize: 13,
-                fontWeight: ativo ? 600 : 400,
-                background: ativo ? 'var(--mjr-navy)' : '#FFFFFF',
-                color: ativo ? '#FFFFFF' : 'var(--mjr-navy)',
-                border: ativo ? '1px solid #2a4f7f' : '1px solid #E2E0DC',
-                cursor: 'pointer',
-              }}
-            >
-              {index === 0 ? `Todos (${clientes.length})` : filtro}
-            </button>
-          )
-        })}
-      </div>
+      <Filtros
+        opcoes={filtros.map((filtro, index) => (index === 0 ? `Todos (${clientes.length})` : filtro))}
+        ativo={`Todos (${clientes.length})`}
+      />
 
-      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <CorpoTela>
         {loading && <div style={{ color: '#9aa0ad' }}>Carregando...</div>}
         {!loading && clientes.length === 0 && (
           <div style={{ color: '#9aa0ad' }}>Nenhum cliente cadastrado ainda.</div>
         )}
-        {!loading && clientes.map((cliente, index) => {
-          const rosa = index % 2 === 0
-          const pendente = cliente.status === 'pendente'
-          return (
-            <div
-              key={cliente.id ?? index}
-              onClick={() => abrirEdicao(cliente)}
-              style={{
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                background: '#FFFFFF',
-                border: '1px solid #E4E7EC',
-                borderRadius: 14,
-                padding: 14,
-                boxShadow: '0 1px 2px rgba(16,24,40,0.06)',
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  fontWeight: 700,
-                  background: rosa ? '#E4EAF1' : '#EFEFEF',
-                  color: rosa ? 'var(--mjr-navy)' : '#4A4A4A',
-                }}
-              >
-                {iniciais(cliente.nome)}
-              </div>
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 500, color: '#14202e' }}>{cliente.nome}</div>
-                <div style={{ fontSize: 13, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {[
+        <ListaCartoes>
+          {!loading && clientes.map((cliente, index) => {
+            const pendente = cliente.status === 'pendente'
+            return (
+              <LinhaLista
+                key={cliente.id ?? index}
+                onClick={() => abrirEdicao(cliente)}
+                cor={pendente ? '#F2B84B' : '#4C7A4E'}
+                nome={cliente.nome}
+                apoio={[
+                  [
                     cliente.tipo ? cliente.tipo.charAt(0).toUpperCase() + cliente.tipo.slice(1) : null,
                     cliente.tipo === 'automotivo'
                       ? cliente.veiculo_modelo || formatarPlaca(cliente.veiculo_imovel)
                       : cliente.veiculo_imovel,
-                  ].filter(Boolean).join(' · ')}
-                </div>
-              </div>
-
-              <StatusTag tom={pendente ? 'ambar' : 'verde'}>{pendente ? 'Pendente' : 'Em dia'}</StatusTag>
-            </div>
-          )
-        })}
-      </div>
+                  ].filter(Boolean).join(' · '),
+                ]}
+                etiqueta={{ tom: pendente ? 'ambar' : 'verde', texto: pendente ? 'Pendente' : 'Em dia' }}
+              />
+            )
+          })}
+        </ListaCartoes>
+      </CorpoTela>
 
       <BotaoFlutuante
         ativa={ativa}
