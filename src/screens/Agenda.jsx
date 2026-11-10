@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import StatusTag from '../components/StatusTag'
 import BotaoFlutuante from '../components/BotaoFlutuante'
 import FormAgendamento from '../components/FormAgendamento'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 const ROTULOS_DIA = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
 
@@ -105,6 +106,7 @@ function Agenda({ abrirOS, dataVersion, ativa }) {
   const [dataBase, setDataBase] = useState(() => new Date())
   const [diaSelecionado, setDiaSelecionado] = useState(() => paraISO(new Date()))
   const [mostrarCalendario, setMostrarCalendario] = useState(false)
+  useScrollLock(mostrarCalendario)
   const [mesCalendario, setMesCalendario] = useState(() => new Date())
 
   function abrirEdicao(ag) {

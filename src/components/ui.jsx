@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, X } from 'lucide-react'
 import StatusTag from './StatusTag'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 // Componentes visuais compartilhados por Início, Financeiro e Clientes.
 
@@ -242,6 +243,7 @@ export function SeletorSegmentado({ opcoes, valor, onChange }) {
 // Bottom sheet: handle, título, X, fecha ao tocar fora. Corpo rolável e `rodape` fixo.
 // Acompanha o visualViewport para o teclado do iOS não esconder o campo focado.
 export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
+  useScrollLock()
   const [viewport, setViewport] = useState(() => lerViewport())
 
   useEffect(() => {
@@ -273,6 +275,7 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
         top: viewport.top,
         height: viewport.height,
         zIndex: 200,
+        touchAction: 'none',
         background: 'rgba(0, 0, 0, 0.55)',
         display: 'flex',
         alignItems: 'flex-end',
@@ -315,6 +318,8 @@ export function BottomSheet({ titulo, onFechar, onSubmit, rodape, children }) {
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            touchAction: 'pan-y',
             WebkitOverflowScrolling: 'touch',
             padding: '16px 20px',
             display: 'flex',

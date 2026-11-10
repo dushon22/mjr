@@ -321,3 +321,9 @@ code {
   outline: 2px solid #7db2ff;
   outline-offset: 2px;
 }
+
+/* Enquanto um modal/sheet está aberto, o fundo não recebe toque. */
+html[data-modal-aberto] .bottom-nav,
+html[data-modal-aberto] .fab {
+  pointer-events: none;
+}
