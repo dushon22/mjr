@@ -88,9 +88,9 @@ function Inicio({ abrirFinanceiro, dataVersion, ativa }) {
   function circuloIcone(Icone, fundo, cor) {
     return (
       <span
-        style={{ width: 36, height: 36, borderRadius: '50%', background: fundo, color: cor, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: 32, height: 32, borderRadius: '50%', background: fundo, color: cor, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
-        <Icone size={18} />
+        <Icone size={16} />
       </span>
     )
   }
@@ -118,7 +118,7 @@ function Inicio({ abrirFinanceiro, dataVersion, ativa }) {
     return <div style={{ padding: 20, color: '#9aa0ad' }}>Carregando...</div>
   }
 
-  const cartaoResumo = { ...estiloCartao, flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, paddingRight: 28 }
+  const cartaoResumo = { ...estiloCartao, flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '14px 10px 14px 12px' }
   const cartaoCompacto = { ...estiloCartao, textAlign: 'center', paddingBottom: 22 }
 
   const titulo = (
@@ -152,13 +152,6 @@ function Inicio({ abrirFinanceiro, dataVersion, ativa }) {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontSize: 13, color: '#b9c8dc' }}>Saldo do caixa · {maiuscula(nomeMes(mesAtual))}</div>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); abrirTudo() }}
-              style={{ color: '#7db2ff', fontSize: 13, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-            >
-              Ver financeiro
-            </button>
           </div>
           <div style={{ fontSize: 30, fontWeight: 500, color: saldo < 0 ? '#ff9b90' : '#FFFFFF', margin: '4px 0 14px' }}>
             {formatarReais(saldo)}
@@ -183,17 +176,19 @@ function Inicio({ abrirFinanceiro, dataVersion, ativa }) {
           <AreaToque onClick={abrir('A receber', primeiroDia(mesAtual))} label="Abrir contas a receber" style={cartaoResumo}>
             {circuloIcone(Clock, '#fdf1d6', '#9a6a00')}
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 500, color: '#14304d' }}>{formatarReais(aReceber)}</div>
+              <div style={{ fontSize: 18, fontWeight: 500, color: '#14304d', whiteSpace: 'nowrap' }}>{formatarReais(aReceber)}</div>
               <div style={{ fontSize: 12, color: '#6b7280' }}>A receber</div>
             </div>
           </AreaToque>
           <AreaToque onClick={abrirVencidas} label="Abrir contas vencidas" style={cartaoResumo}>
             {circuloIcone(AlertTriangle, '#fbe4e2', '#C62E22')}
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 18, fontWeight: 500, color: vencidas.length > 0 ? '#C62E22' : '#14304d' }}>
-                {vencidas.length} {vencidas.length === 1 ? 'vencida' : 'vencidas'}
+              <div style={{ fontSize: 18, fontWeight: 500, color: vencidas.length > 0 ? '#C62E22' : '#14304d', whiteSpace: 'nowrap' }}>
+                {formatarReais(somar(vencidas))}
               </div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Em atraso</div>
+              <div style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>
+                {vencidas.length === 0 ? 'Nenhuma vencida' : `${vencidas.length} ${vencidas.length === 1 ? 'vencida' : 'vencidas'}`}
+              </div>
             </div>
           </AreaToque>
         </div>
